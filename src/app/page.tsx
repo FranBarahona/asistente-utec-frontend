@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from 'lucide-react';
+import { Send, Microsoft } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
   SidebarTrigger,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { useToast } from "@/hooks/use-toast";
 
 const aiResponses = [
   "Hello! How can I assist you today?",
@@ -34,6 +35,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [typingText, setTypingText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const { toast } = useToast();
 
   const typeText = (text: string) => {
     return new Promise<void>(resolve => {
@@ -91,6 +93,14 @@ export default function Home() {
     }
   }, [isTyping, typingText]);
 
+  const handleMicrosoftLogin = () => {
+    // Simulate Microsoft OAuth flow
+    toast({
+      title: "Microsoft Login",
+      description: "Simulating Microsoft OAuth flow...",
+    });
+  };
+
 
   return (
     <SidebarProvider>
@@ -99,9 +109,10 @@ export default function Home() {
           <SidebarContent>
             <div className="p-4">
               <h2 className="text-lg font-semibold mb-4">Login</h2>
-              <Input type="text" placeholder="Username" className="mb-2" />
-              <Input type="password" placeholder="Password" className="mb-2" />
-              <Button>Login</Button>
+              <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
+                <Microsoft className="w-4 h-4 mr-2" />
+                Login with Microsoft
+              </Button>
             </div>
           </SidebarContent>
         </Sidebar>
