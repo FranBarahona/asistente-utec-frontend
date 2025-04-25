@@ -123,7 +123,7 @@ export default function Home() {
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex flex-col flex-grow p-4 items-center">
+        <div className="flex flex-col flex-grow p-4 items-center justify-center">
           <div className="flex items-center w-full justify-between">
             <SidebarTrigger className="mr-2" />
             <h1 className="text-2xl font-bold">SimuChat</h1>
