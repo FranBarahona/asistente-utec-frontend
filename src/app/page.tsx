@@ -1,10 +1,15 @@
-
 "use client";
 
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarTrigger,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
 
 const aiResponses = [
   "Hello! How can I assist you today?",
@@ -39,38 +44,57 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <div className="flex-grow p-4 overflow-y-auto">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`mb-2 p-3 rounded-lg ${
-              message.isUser
-                ? 'bg-accent text-primary-foreground self-end'
-                : 'bg-secondary text-foreground self-start'
-            }`}
-          >
-            {message.text}
+    <SidebarProvider>
+      <div className="flex h-screen bg-background">
+        <Sidebar>
+          <SidebarContent>
+            <div className="p-4">
+              <h2 className="text-lg font-semibold mb-4">Login</h2>
+              <Input type="text" placeholder="Username" className="mb-2" />
+              <Input type="password" placeholder="Password" className="mb-2" />
+              <Button>Login</Button>
+            </div>
+          </SidebarContent>
+        </Sidebar>
+
+        <div className="flex flex-col flex-grow p-4">
+          <div className="flex items-center">
+            <SidebarTrigger className="mr-2" />
+            <h1 className="text-2xl font-bold">SimuChat</h1>
           </div>
-        ))}
+          <div className="flex-grow overflow-y-auto">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`mb-2 p-3 rounded-lg ${
+                  message.isUser
+                    ? 'bg-accent text-primary-foreground self-end'
+                    : 'bg-secondary text-foreground self-start'
+                }`}
+              >
+                {message.text}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center">
+            <Input
+              type="text"
+              placeholder="Type your message..."
+              className="flex-grow mr-2"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Button onClick={handleSendMessage} aria-label="Send message">
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="p-4 flex items-center">
-        <Input
-          type="text"
-          placeholder="Type your message..."
-          className="flex-grow mr-2"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSendMessage();
-            }
-          }}
-        />
-        <Button onClick={handleSendMessage} aria-label="Send message">
-          <Send className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
+    </SidebarProvider>
   );
 }
