@@ -123,12 +123,12 @@ export default function Home() {
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex flex-col flex-grow p-4">
-          <div className="flex items-center">
+        <div className="flex flex-col flex-grow p-4 items-center">
+          <div className="flex items-center w-full justify-between">
             <SidebarTrigger className="mr-2" />
             <h1 className="text-2xl font-bold">SimuChat</h1>
           </div>
-          <div className="flex-grow overflow-y-auto">
+          <div className="flex-grow overflow-y-auto w-full max-w-md">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -142,7 +142,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center w-full max-w-md">
             <Input
               type="text"
               placeholder="Type your message..."
