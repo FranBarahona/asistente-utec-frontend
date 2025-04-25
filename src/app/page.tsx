@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Microsoft } from 'lucide-react';
+import { Send } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -101,6 +101,12 @@ export default function Home() {
     });
   };
 
+  const MicrosoftIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 3.731A.73.73 0 0 0 1.269 3v17.982a.73.73 0 0 0 .731.749h9.571a.73.73 0 0 0 .731-.731V3.731a.73.73 0 0 0-.731-.731H2ZM12.429 3.731A.73.73 0 0 0 11.7 3v9.982a.73.73 0 0 0 .731.731h9.571a.73.73 0 0 0 .731-.731V3.731a.73.73 0 0 0-.731-.731h-9.571ZM12.429 14.018a.73.73 0 0 0-1.731.713v6.25a.73.73 0 0 0 .731.731h9.571a.73.73 0 0 0 .731-.731v-6.25a.73.73 0 0 0-.731-.731h-9.571Z"/>
+    </svg>
+  );
+
 
   return (
     <SidebarProvider>
@@ -110,7 +116,7 @@ export default function Home() {
             <div className="p-4">
               <h2 className="text-lg font-semibold mb-4">Login</h2>
               <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
-                <Microsoft className="w-4 h-4 mr-2" />
+                <MicrosoftIcon className="w-4 h-4 mr-2" />
                 Login with Microsoft
               </Button>
             </div>
