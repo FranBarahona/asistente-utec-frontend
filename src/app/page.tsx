@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from 'lucide-react';
@@ -32,16 +32,65 @@ interface Message {
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [typingText, setTypingText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
-  const handleSendMessage = () => {
+  const typeText = (text: string) => {
+    return new Promise<void>(resolve => {
+      let i = 0;
+      setIsTyping(true);
+      const intervalId = setInterval(() => {
+        if (i < text.length) {
+          setTypingText(prev => prev + text[i]);
+          i++;
+        } else {
+          clearInterval(intervalId);
+          setIsTyping(false);
+          resolve();
+        }
+      }, 20); // typing speed, adjust as needed
+    });
+  };
+
+  const handleSendMessage = async () => {
     if (input.trim() !== '') {
       const userMessage = { text: input, isUser: true };
-      const aiMessage = { text: getRandomResponse(), isUser: false };
-
-      setMessages([...messages, userMessage, aiMessage]);
+      setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
+
+      const aiResponse = getRandomResponse();
+      setTypingText(''); // Clear the previous typing text
+      await typeText(aiResponse); // Await the completion of typing
+
+      const aiMessage = { text: typingText, isUser: false };
+      setMessages(prevMessages => {
+        // setMessages is asynchronous, we need to ensure we are adding the new message to the correct previous state.
+        return [...prevMessages, aiMessage];
+      });
     }
   };
+
+  useEffect(() => {
+    // This useEffect runs after typingText state is updated, ensuring it reflects the completed typed text.
+    if (!isTyping && typingText !== '') {
+      // This condition ensures that this effect runs only once after the typing animation is complete.
+      setMessages(prevMessages => {
+        // Find the last AI message
+        const lastAiMessageIndex = prevMessages.findLastIndex(message => !message.isUser);
+  
+        // If there is a last AI message, update it, otherwise, return the previous messages unchanged.
+        if (lastAiMessageIndex !== -1) {
+          const newMessages = [...prevMessages];
+          // Replace the content of the last AI message
+          newMessages[lastAiMessageIndex] = { ...newMessages[lastAiMessageIndex], text: typingText };
+          return newMessages;
+        }
+        // If there are no previous AI messages, return the previous messages unchanged. This is a safety net.
+        return prevMessages;
+      });
+    }
+  }, [isTyping, typingText]);
+
 
   return (
     <SidebarProvider>
