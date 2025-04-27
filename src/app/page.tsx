@@ -110,20 +110,20 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen w-screen bg-background">
         <Sidebar>
           <SidebarContent>
             <div className="p-4">
               <h2 className="text-lg font-semibold mb-4">Login</h2>
               <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
-                <MicrosoftIcon className="w-4 h-4 mr-2" />
+                <MicrosoftIcon />
                 Login with Microsoft
               </Button>
             </div>
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex flex-col flex-grow p-4 items-center justify-center">
+        <div className="flex flex-col flex-grow p-4 w-screen">
           <div className="flex items-center w-full justify-between">
             <SidebarTrigger className="mr-2" />
             <h1 className="text-2xl font-bold">SimuChat</h1>

@@ -80,9 +80,10 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  /*
+   * Removed the '*' selector rule that applied `border-border` globally.
+   * Default border color is handled by Tailwind via the theme.
+   */
   body {
     @apply bg-background text-foreground;
   }
