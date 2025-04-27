@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface Message {
   text: string;
   isUser: boolean;
+  isTyping?: boolean; // Add optional isTyping property
 }
 
 export default function Home() {
@@ -149,7 +150,7 @@ export default function Home() {
               <h2 className="text-lg font-semibold mb-4">Login</h2>
               <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
                 <MicrosoftIcon />
-                Login with Microsoft
+                <span className="ml-2">Login with Microsoft</span>
               </Button>
             </div>
           </SidebarContent>
@@ -177,8 +178,8 @@ export default function Home() {
                      <div
                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
                          message.isUser
-                           ? 'bg-primary text-primary-foreground'
-                           : 'bg-secondary text-secondary-foreground'
+                           ? 'bg-primary text-primary-foreground' // Use primary for user
+                           : 'bg-secondary text-secondary-foreground' // Use secondary for AI
                        } ${message.isTyping ? 'italic text-muted-foreground' : ''}`}
                      >
                        {message.text || <span className="animate-pulse">...</span>}{/* Show pulse if text is empty during typing */}
