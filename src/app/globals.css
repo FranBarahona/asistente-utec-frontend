@@ -79,12 +79,8 @@ body {
   }
 }
 
-@layer base {
-  /*
-   * Removed the '*' selector rule that applied `border-border` globally.
-   * Default border color is handled by Tailwind via the theme.
-   */
-  body {
-    @apply bg-background text-foreground;
-  }
-}
+/*
+ * Removed the @layer base rule that applied bg-background and text-foreground
+ * to the body. This is now handled directly by Tailwind via the theme
+ * configuration in tailwind.config.ts using direct HSL values.
+ */

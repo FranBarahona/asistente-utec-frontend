@@ -10,56 +10,58 @@ export default {
   theme: {
   	extend: {
   		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
-  			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
-  			},
-  			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
-  			},
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
-  			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
-  			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
-  			},
-  			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
-  			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			},
-  			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
-  			}
+        // Using direct HSL values corresponding to the definitions in globals.css
+        // This avoids potential issues with Tailwind resolving CSS variables during build.
+        background: 'hsl(0 0% 100%)', // White (--background: 0 0% 100%;)
+        foreground: 'hsl(0 0% 3.9%)', // (--foreground: 0 0% 3.9%;)
+        card: {
+          DEFAULT: 'hsl(0 0% 100%)', // (--card: 0 0% 100%;)
+          foreground: 'hsl(0 0% 3.9%)' // (--card-foreground: 0 0% 3.9%;)
+        },
+        popover: {
+          DEFAULT: 'hsl(0 0% 100%)', // (--popover: 0 0% 100%;)
+          foreground: 'hsl(0 0% 3.9%)' // (--popover-foreground: 0 0% 3.9%;)
+        },
+        primary: {
+          DEFAULT: 'hsl(0 0% 9%)', // (--primary: 0 0% 9%;)
+          foreground: 'hsl(0 0% 98%)' // (--primary-foreground: 0 0% 98%;)
+        },
+        secondary: {
+          DEFAULT: 'hsl(0 0% 96.1%)', // Light Gray (--secondary: 0 0% 96.1%;)
+          foreground: 'hsl(0 0% 9%)' // (--secondary-foreground: 0 0% 9%;)
+        },
+        muted: {
+          DEFAULT: 'hsl(0 0% 96.1%)', // (--muted: 0 0% 96.1%;)
+          foreground: 'hsl(0 0% 45.1%)' // (--muted-foreground: 0 0% 45.1%;)
+        },
+        accent: {
+          DEFAULT: 'hsl(180 100% 25.1%)', // Teal (--accent: 180 100% 25.1%;)
+          foreground: 'hsl(0 0% 98%)' // (--accent-foreground: 0 0% 98%;)
+        },
+        destructive: {
+          DEFAULT: 'hsl(0 84.2% 60.2%)', // (--destructive: 0 84.2% 60.2%;)
+          foreground: 'hsl(0 0% 98%)' // (--destructive-foreground: 0 0% 98%;)
+        },
+        border: 'hsl(0 0% 89.8%)', // (--border: 0 0% 89.8%;)
+        input: 'hsl(0 0% 89.8%)', // (--input: 0 0% 89.8%;)
+        ring: 'hsl(0 0% 3.9%)', // (--ring: 0 0% 3.9%;)
+        chart: {
+          '1': 'hsl(12 76% 61%)', // (--chart-1: 12 76% 61%;)
+          '2': 'hsl(173 58% 39%)', // (--chart-2: 173 58% 39%;)
+          '3': 'hsl(197 37% 24%)', // (--chart-3: 197 37% 24%;)
+          '4': 'hsl(43 74% 66%)', // (--chart-4: 43 74% 66%;)
+          '5': 'hsl(27 87% 67%)' // (--chart-5: 27 87% 67%;)
+        },
+        sidebar: {
+          DEFAULT: 'hsl(0 0% 98%)', // (--sidebar-background: 0 0% 98%;)
+          foreground: 'hsl(240 5.3% 26.1%)', // (--sidebar-foreground: 240 5.3% 26.1%;)
+          primary: 'hsl(240 5.9% 10%)', // (--sidebar-primary: 240 5.9% 10%;)
+          'primary-foreground': 'hsl(0 0% 98%)', // (--sidebar-primary-foreground: 0 0% 98%;)
+          accent: 'hsl(240 4.8% 95.9%)', // (--sidebar-accent: 240 4.8% 95.9%;)
+          'accent-foreground': 'hsl(240 5.9% 10%)', // (--sidebar-accent-foreground: 240 5.9% 10%;)
+          border: 'hsl(220 13% 91%)', // (--sidebar-border: 220 13% 91%;)
+          ring: 'hsl(217.2 91.2% 59.8%)' // (--sidebar-ring: 217.2 91.2% 59.8%;)
+        }
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
