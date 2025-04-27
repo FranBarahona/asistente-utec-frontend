@@ -162,7 +162,7 @@ export default function Home() {
             {/* Header */}
             <div className="flex items-center p-4 border-b">
               <SidebarTrigger className="mr-2 md:hidden" /> {/* Show trigger only on small screens */}
-              <h1 className="text-xl font-bold">SimuChat</h1>
+              <h1 className="text-xl font-bold">Chat utec</h1>
             </div>
 
             {/* Message List */}
