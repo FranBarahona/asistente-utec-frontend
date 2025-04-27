@@ -10,9 +10,10 @@ import {
   SidebarContent,
   SidebarTrigger,
   SidebarProvider,
+  SidebarInset, // Import SidebarInset
 } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
-import { Toaster } from '@/components/ui/toaster'; // Import Toaster
+import { Toaster } from '@/components/ui/toaster';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
@@ -53,8 +54,9 @@ export default function Home() {
         // Update the last message (the placeholder) with the currently typed text
         setMessages(prev => {
            const newMessages = [...prev];
-           if (newMessages.length > 0 && newMessages[newMessages.length - 1].isTyping) {
-             newMessages[newMessages.length - 1].text = currentTypedText + '...'; // Add ellipsis while typing
+           const lastMessage = newMessages[newMessages.length - 1];
+           if (lastMessage && lastMessage.isTyping) {
+             lastMessage.text = currentTypedText + '...'; // Add ellipsis while typing
            }
            return newMessages;
         });
@@ -65,9 +67,10 @@ export default function Home() {
         // Update the last message with the final text and remove the typing indicator
         setMessages(prev => {
           const newMessages = [...prev];
-           if (newMessages.length > 0 && newMessages[newMessages.length - 1].isTyping) {
-             newMessages[newMessages.length - 1].text = currentTypedText;
-             delete newMessages[newMessages.length - 1].isTyping; // Remove typing flag
+           const lastMessage = newMessages[newMessages.length - 1];
+           if (lastMessage && lastMessage.isTyping) {
+             lastMessage.text = currentTypedText;
+             delete lastMessage.isTyping; // Remove typing flag
            }
            return newMessages;
         });
@@ -96,8 +99,8 @@ export default function Home() {
         const data = await response.json();
         const aiResponseText = data.message; // Extract message from response
 
-        if (!aiResponseText) {
-            throw new Error("Invalid response format from API");
+        if (typeof aiResponseText !== 'string') { // Check if message is a string
+            throw new Error("Invalid response format from API or message is not a string");
         }
 
         // Start typing animation for the AI response
@@ -110,11 +113,11 @@ export default function Home() {
         console.error("Error fetching AI response:", error);
         toast({
           title: "Error",
-          description: "Failed to get response from AI. Please try again.",
+          description: `Failed to get response from AI: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
           variant: "destructive",
         });
         // Remove the user message if the AI fails to respond? Optional.
-        // setMessages(prev => prev.slice(0, -1));
+        // setMessages(prev => prev.filter(msg => msg !== userMessage)); // More robust removal
       }
     }
   };
@@ -144,10 +147,10 @@ export default function Home() {
     <SidebarProvider>
        <Toaster /> {/* Add Toaster component here */}
       <div className="flex h-screen w-screen bg-background">
-        <Sidebar>
+        <Sidebar> {/* Default collapsible is "offcanvas" */}
           <SidebarContent>
             <div className="p-4">
-              <h2 className="text-lg font-semibold mb-4">Login</h2>
+              <h2 className="text-lg font-semibold mb-4">Usa una cuenta </h2>
               <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
                 <MicrosoftIcon />
                 <span className="ml-2">Login with Microsoft</span>
@@ -156,63 +159,67 @@ export default function Home() {
           </SidebarContent>
         </Sidebar>
 
-        {/* Main Chat Area */}
-        <div className="flex flex-col flex-grow items-center justify-center p-4">
-          <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
-            {/* Header */}
-            <div className="flex items-center p-4 border-b">
-              <SidebarTrigger className="mr-2 md:hidden" /> {/* Show trigger only on small screens */}
-              <h1 className="text-xl font-bold">Chat utec</h1>
-            </div>
-
-            {/* Message List */}
-            <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
-              <div className="space-y-4">
-                 {messages.map((message, index) => (
-                   <div
-                     key={index}
-                     className={`flex ${
-                       message.isUser ? 'justify-end' : 'justify-start'
-                     }`}
-                   >
-                     <div
-                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
-                         message.isUser
-                           ? 'bg-primary text-primary-foreground' // Use primary for user
-                           : 'bg-secondary text-secondary-foreground' // Use secondary for AI
-                       } ${message.isTyping ? 'italic text-muted-foreground' : ''}`}
-                     >
-                       {message.text || <span className="animate-pulse">...</span>}{/* Show pulse if text is empty during typing */}
-                     </div>
-                   </div>
-                 ))}
-                 {/* Invisible div to track the bottom */}
-                  <div ref={messagesEndRef} />
+        {/* Wrap Main Chat Area with SidebarInset */}
+        <SidebarInset>
+          <div className="flex flex-col flex-grow items-center justify-center p-4 h-full">
+            <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
+              {/* Header */}
+              <div className="flex items-center p-4 border-b">
+                 {/* Remove md:hidden to show trigger on all screens */}
+                <SidebarTrigger className="mr-2" />
+                <h1 className="text-xl font-bold">Chat utec</h1>
               </div>
-            </ScrollArea>
 
-            {/* Input Area */}
-            <div className="flex items-center p-4 border-t">
-              <Input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-grow mr-2"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); // Prevent newline on Enter
-                    handleSendMessage();
-                  }
-                }}
-                disabled={isTyping} // Disable input while AI is typing
-              />
-              <Button onClick={handleSendMessage} aria-label="Send message" disabled={isTyping}>
-                <Send className="w-4 h-4" />
-              </Button>
+              {/* Message List */}
+              <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+                <div className="space-y-4">
+                   {messages.map((message, index) => (
+                     <div
+                       key={index}
+                       className={`flex ${
+                         message.isUser ? 'justify-end' : 'justify-start'
+                       }`}
+                     >
+                       <div
+                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
+                           message.isUser
+                             ? 'bg-primary text-primary-foreground' // Use primary for user
+                             : 'bg-secondary text-secondary-foreground' // Use secondary for AI
+                         } ${message.isTyping ? 'italic text-muted-foreground' : ''}`}
+                       >
+                         {/* Show pulse if text is empty during typing, otherwise show text */}
+                         {message.isTyping && !message.text ? <span className="animate-pulse">...</span> : message.text}
+                       </div>
+                     </div>
+                   ))}
+                   {/* Invisible div to track the bottom */}
+                    <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* Input Area */}
+              <div className="flex items-center p-4 border-t">
+                <Input
+                  type="text"
+                  placeholder="Type your message..."
+                  className="flex-grow mr-2"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault(); // Prevent newline on Enter
+                      handleSendMessage();
+                    }
+                  }}
+                  disabled={isTyping} // Disable input while AI is typing
+                />
+                <Button onClick={handleSendMessage} aria-label="Send message" disabled={isTyping}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </SidebarInset> {/* Close SidebarInset */}
       </div>
     </SidebarProvider>
   );
