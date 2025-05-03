@@ -285,51 +285,31 @@ Sidebar.displayName = "Sidebar"
 
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
-  // Use SheetTrigger props if mobile, otherwise Button props
-  React.ComponentProps<typeof SheetTrigger> & React.ComponentProps<typeof Button>
+  React.ComponentProps<typeof Button> & { asChild?: boolean } // Simplified props
 >(({ className, onClick, asChild, ...props }, ref) => {
   const { toggleSidebar, isMobile } = useSidebar();
 
-  // Use SheetTrigger on mobile for the Sheet functionality
-  if (isMobile) {
-    return (
-       <SheetTrigger asChild={asChild ?? true}>
+  // Use a regular button on both mobile and desktop
+  return (
         <Button
             ref={ref}
             data-sidebar="trigger"
             variant="ghost"
             size="icon"
-            className={cn("md:hidden", className)} // Only show on mobile effectively
-             onClick={(event) => { // Ensure mobile toggles sheet state
+            className={cn(
+                "flex", // Always flex by default
+                isMobile ? "md:hidden" : "hidden md:flex", // Conditional visibility
+                className
+             )}
+             onClick={(event) => {
                 onClick?.(event);
-                // toggleSidebar(); // Let SheetTrigger handle open/close
+                toggleSidebar(); // Toggle sidebar state (mobile or desktop)
              }}
             {...props} // Pass remaining props
             >
              <PanelLeft />
             <span className="sr-only">Toggle Sidebar</span>
         </Button>
-      </SheetTrigger>
-    );
-  }
-
- // Use a regular button on desktop
-  return (
-    <Button
-      ref={ref}
-      data-sidebar="trigger"
-      variant="ghost"
-      size="icon"
-      className={cn("hidden md:flex", className)} // Only show on desktop
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar(); // Toggle desktop sidebar state
-      }}
-      {...props}
-    >
-      <PanelLeft />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
   );
 });
 SidebarTrigger.displayName = "SidebarTrigger";
