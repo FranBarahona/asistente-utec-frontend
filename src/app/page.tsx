@@ -128,7 +128,11 @@ const AppContent: React.FC = () => {
       setInput('');
 
       try {
-        const apiUrl = `http://localhost:8000/document/ask?query=${encodeURIComponent(userMessageText)}`;
+        const apiUrlBase = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrlBase) {
+            throw new Error("API URL is not configured in environment variables.");
+        }
+        const apiUrl = `${apiUrlBase}/document/ask?query=${encodeURIComponent(userMessageText)}`;
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
@@ -291,16 +295,19 @@ const AppContent: React.FC = () => {
       {/* Sidebar Trigger - position fixed for visibility */}
        <div className="fixed top-4 left-4 z-20">
          {/* Use SheetTrigger for mobile */}
-         {sidebarContext?.isMobile && (
-            <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <PanelLeft />
-                    <span className="sr-only">Toggle Sidebar</span>
-                </Button>
-            </SheetTrigger>
+         {sidebarContext?.isMobile ? (
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <PanelLeft />
+                        <span className="sr-only">Toggle Sidebar</span>
+                    </Button>
+                </SheetTrigger>
+                {/* Mobile SheetContent is rendered inside Sidebar component */}
+            </Sheet>
+         ) : (
+            <SidebarTrigger />
          )}
-         {/* Use SidebarTrigger for desktop */}
-          {!sidebarContext?.isMobile && <SidebarTrigger />}
        </div>
 
       <div className="flex h-screen w-screen bg-background">
