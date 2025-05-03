@@ -4,59 +4,95 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from 'lucide-react';
+import { Send, LogOut, FileText, MessageSquare } from 'lucide-react'; // Added LogOut, FileText, MessageSquare
 import {
   Sidebar,
   SidebarContent,
   SidebarTrigger,
   SidebarProvider,
-  SidebarInset, // Import SidebarInset
+  SidebarInset,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from '@/components/ui/toaster';
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import ManageDocuments from '@/components/manage-documents';
 
 interface Message {
   text: string;
   isUser: boolean;
-  isTyping?: boolean; // Add optional isTyping property
+  isTyping?: boolean;
 }
 
-export default function Home() {
+type UserRole = 'admin' | 'student' | 'guest';
+type CurrentView = 'chat' | 'documents';
+
+// Helper function to determine user role based on email
+const determineUserRole = (email: string | null): UserRole => {
+  if (!email) return 'guest';
+  // Admin pattern: name.lastname@mail.utec.edu.sv
+  if (/^[a-zA-Z]+\.[a-zA-Z]+@mail\.utec\.edu\.sv$/.test(email)) {
+    return 'admin';
+  }
+  // Student pattern: 8digits@mail.utec.edu.sv
+  if (/^\d{8}@mail\.utec\.edu\.sv$/.test(email)) {
+    return 'student';
+  }
+  return 'guest'; // Default to guest if no pattern matches
+};
+
+// New component to hold the main application content and structure
+const AppContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the bottom of the messages
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Authentication and Role State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>('guest');
+  const [currentView, setCurrentView] = useState<CurrentView>('chat'); // Default view
+
+  // Get sidebar context - NOW SAFE TO CALL HERE
+  const sidebarContext = useSidebar();
+
+  // Update role whenever email changes
+  useEffect(() => {
+    setUserRole(determineUserRole(userEmail));
+  }, [userEmail]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Scroll to bottom whenever messages update
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
 
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
     let currentTypedText = '';
     setIsTyping(true);
-    // Add a placeholder message for the AI while typing
     setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
 
     const intervalId = setInterval(() => {
       if (i < text.length) {
         currentTypedText += text[i];
-        // Update the last message (the placeholder) with the currently typed text
         setMessages(prev => {
            const newMessages = [...prev];
            const lastMessage = newMessages[newMessages.length - 1];
            if (lastMessage && lastMessage.isTyping) {
-             lastMessage.text = currentTypedText + '...'; // Add ellipsis while typing
+             lastMessage.text = currentTypedText + '...';
            }
            return newMessages;
         });
@@ -64,32 +100,29 @@ export default function Home() {
       } else {
         clearInterval(intervalId);
         setIsTyping(false);
-        // Update the last message with the final text and remove the typing indicator
         setMessages(prev => {
           const newMessages = [...prev];
            const lastMessage = newMessages[newMessages.length - 1];
            if (lastMessage && lastMessage.isTyping) {
              lastMessage.text = currentTypedText;
-             delete lastMessage.isTyping; // Remove typing flag
+             lastMessage.isTyping = false; // Correctly set isTyping to false
            }
            return newMessages;
         });
-        callback(currentTypedText); // Callback with the final text if needed
+        callback(currentTypedText);
       }
-    }, 50); // typing speed, adjust as needed
+    }, 50);
   };
 
   const handleSendMessage = async () => {
-    if (input.trim() !== '' && !isTyping) {
+    if (input.trim() !== '' && !isTyping && isLoggedIn) { // Only send if logged in
       const userMessageText = input;
       const userMessage = { text: userMessageText, isUser: true };
       setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
 
       try {
-        // Construct the URL with the query parameter
         const apiUrl = `http://localhost:8000/document/ask?query=${encodeURIComponent(userMessageText)}`;
-
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
@@ -97,15 +130,13 @@ export default function Home() {
         }
 
         const data = await response.json();
-        const aiResponseText = data.message; // Extract message from response
+        const aiResponseText = data.message;
 
-        if (typeof aiResponseText !== 'string') { // Check if message is a string
+        if (typeof aiResponseText !== 'string') {
             throw new Error("Invalid response format from API or message is not a string");
         }
 
-        // Start typing animation for the AI response
         typeText(aiResponseText, (finalText) => {
-          // The state is already updated within typeText
           console.log("AI response finished typing:", finalText);
         });
 
@@ -116,21 +147,63 @@ export default function Home() {
           description: `Failed to get response from AI: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
           variant: "destructive",
         });
-        // Remove the user message if the AI fails to respond? Optional.
-        // setMessages(prev => prev.filter(msg => msg !== userMessage)); // More robust removal
+         // Add a non-typing message to indicate the error
+         setMessages(prev => [...prev, { text: 'Sorry, I could not get a response.', isUser: false }]);
       }
+    } else if (!isLoggedIn) {
+        toast({
+            title: "Login Required",
+            description: "Please log in to start chatting.",
+            variant: "default",
+        });
     }
   };
 
-
   const handleMicrosoftLogin = () => {
-    // Simulate Microsoft OAuth flow
     toast({
       title: "Microsoft Login",
       description: "Simulating Microsoft OAuth flow...",
     });
-    // In a real app, you would redirect to Microsoft's OAuth endpoint
-    // and handle the callback.
+
+    const simulatedEmail = prompt("Enter your UTEC email for simulation (e.g., estefany.perez@mail.utec.edu.sv or 2715282023@mail.utec.edu.sv):");
+
+    if (simulatedEmail) {
+      setUserEmail(simulatedEmail);
+      setIsLoggedIn(true);
+      const role = determineUserRole(simulatedEmail);
+      setUserRole(role);
+      setCurrentView('chat'); // Reset view to chat on login
+      toast({
+        title: "Login Successful",
+        description: `Logged in as ${simulatedEmail} (${role}).`,
+      });
+       // Close mobile sidebar after login if it's open
+      if (sidebarContext?.isMobile && sidebarContext?.openMobile) {
+        sidebarContext?.setOpenMobile(false);
+      }
+    } else {
+       toast({
+        title: "Login Cancelled",
+        description: "Email entry cancelled.",
+        variant: "destructive",
+      });
+    }
+  };
+
+   const handleLogout = () => {
+    setUserEmail(null);
+    setIsLoggedIn(false);
+    setUserRole('guest');
+    setMessages([]); // Clear messages on logout
+    setCurrentView('chat'); // Reset view
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+     // Close mobile sidebar after logout if it's open
+    if (sidebarContext?.isMobile && sidebarContext?.openMobile) {
+      sidebarContext?.setOpenMobile(false);
+    }
   };
 
   const MicrosoftIcon = () => (
@@ -142,85 +215,159 @@ export default function Home() {
      </svg>
   );
 
+  const ChatInterface = () => (
+    <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
+      <div className="flex items-center p-4 border-b">
+        <h1 className="text-xl font-bold text-center flex-grow">Chat Utec</h1>
+      </div>
+
+      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+        <div className="space-y-4">
+            {!isLoggedIn && (
+                 <div className="text-center text-muted-foreground p-4">
+                    Please log in to start chatting.
+                 </div>
+            )}
+           {messages.map((message, index) => (
+             <div
+               key={index}
+               className={`flex ${
+                 message.isUser ? 'justify-end' : 'justify-start'
+               }`}
+             >
+               <div
+                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
+                   message.isUser
+                     ? 'bg-primary text-primary-foreground'
+                     : 'bg-secondary text-secondary-foreground'
+                 } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`} // Added animate-pulse
+               >
+                 {message.text || (message.isTyping ? '...' : '')} {/* Ensure typing state shows something */}
+               </div>
+             </div>
+           ))}
+            <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      <div className="flex items-center p-4 border-t">
+        <Input
+          type="text"
+          placeholder={isLoggedIn ? "Type your message..." : "Log in to chat"}
+          className="flex-grow mr-2"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          disabled={isTyping || !isLoggedIn}
+        />
+        <Button onClick={handleSendMessage} aria-label="Send message" disabled={isTyping || !isLoggedIn}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
-    <SidebarProvider>
-       <Toaster /> {/* Add Toaster component here */}
+    <>
+      <Toaster />
+      {/* Place SidebarTrigger outside SidebarInset */}
+      <div className="absolute top-4 left-4 z-20">
+        <SidebarTrigger />
+      </div>
       <div className="flex h-screen w-screen bg-background">
-        <Sidebar> {/* Default collapsible is "offcanvas" */}
+
+        <Sidebar collapsible="icon">
           <SidebarContent>
-            <div className="p-4">
-              <h2 className="text-lg font-semibold mb-4">Usa una cuenta </h2>
-              <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft">
-                <MicrosoftIcon />
-                <span className="ml-2">Login with Microsoft</span>
-              </Button>
-            </div>
+             <SidebarHeader className="items-center">
+                {isLoggedIn && userEmail && (
+                    <div className="flex flex-col items-center gap-2 w-full">
+                        <Avatar className="h-12 w-12">
+                         <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
+                         <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium text-center break-all px-2">{userEmail}</span>
+                        <span className="text-xs text-muted-foreground">{userRole}</span>
+                    </div>
+                )}
+             </SidebarHeader>
+             <Separator className="my-2" />
+            <SidebarMenu className="flex-grow">
+              {isLoggedIn && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setCurrentView('chat')}
+                      isActive={currentView === 'chat'}
+                      tooltip={{ children: "Chat" }}
+                    >
+                      <MessageSquare />
+                      <span>Chat</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {userRole === 'admin' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => setCurrentView('documents')}
+                        isActive={currentView === 'documents'}
+                        tooltip={{ children: "Manage Documents" }}
+                      >
+                        <FileText />
+                        <span>Manage Documents</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </>
+              )}
+            </SidebarMenu>
+             <Separator className="my-2" />
+             <SidebarFooter>
+                {isLoggedIn ? (
+                     <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={handleLogout} tooltip={{ children: "Logout" }}>
+                                <LogOut />
+                                <span>Logout</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                ) : (
+                    <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft" className="w-full">
+                        <MicrosoftIcon />
+                        <span className="ml-2">Login with Microsoft</span>
+                    </Button>
+                )}
+
+             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
 
-        {/* Wrap Main Chat Area with SidebarInset */}
         <SidebarInset>
-          <div className="flex flex-col flex-grow items-center justify-center p-4 h-full">
-            <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
-              {/* Header */}
-              <div className="flex items-center p-4 border-b">
-                 {/* Remove md:hidden to show trigger on all screens */}
-                <SidebarTrigger className="mr-2" />
-                <h1 className="text-xl font-bold">Chat utec</h1>
-              </div>
-
-              {/* Message List */}
-              <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
-                <div className="space-y-4">
-                   {messages.map((message, index) => (
-                     <div
-                       key={index}
-                       className={`flex ${
-                         message.isUser ? 'justify-end' : 'justify-start'
-                       }`}
-                     >
-                       <div
-                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
-                           message.isUser
-                             ? 'bg-primary text-primary-foreground' // Use primary for user
-                             : 'bg-secondary text-secondary-foreground' // Use secondary for AI
-                         } ${message.isTyping ? 'italic text-muted-foreground' : ''}`}
-                       >
-                         {/* Show pulse if text is empty during typing, otherwise show text */}
-                         {message.isTyping && !message.text ? <span className="animate-pulse">...</span> : message.text}
-                       </div>
-                     </div>
-                   ))}
-                   {/* Invisible div to track the bottom */}
-                    <div ref={messagesEndRef} />
+          <div className="flex flex-col flex-grow items-center justify-center p-4 pt-16 h-full">
+            {currentView === 'chat' && <ChatInterface />}
+            {currentView === 'documents' && userRole === 'admin' && <ManageDocuments />}
+             {currentView === 'documents' && userRole !== 'admin' && (
+                <div className="text-center text-destructive p-4">
+                    You do not have permission to access this page.
                 </div>
-              </ScrollArea>
-
-              {/* Input Area */}
-              <div className="flex items-center p-4 border-t">
-                <Input
-                  type="text"
-                  placeholder="Type your message..."
-                  className="flex-grow mr-2"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault(); // Prevent newline on Enter
-                      handleSendMessage();
-                    }
-                  }}
-                  disabled={isTyping} // Disable input while AI is typing
-                />
-                <Button onClick={handleSendMessage} aria-label="Send message" disabled={isTyping}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+             )}
           </div>
-        </SidebarInset> {/* Close SidebarInset */}
+        </SidebarInset>
       </div>
+    </>
+  );
+};
+
+
+// Main export wraps content in SidebarProvider
+export default function Home() {
+  return (
+    <SidebarProvider defaultOpen={false}>
+       <AppContent />
     </SidebarProvider>
   );
 }
