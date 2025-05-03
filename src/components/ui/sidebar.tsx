@@ -107,9 +107,10 @@ const SidebarProvider = React.forwardRef<
 
     const toggleSidebar = React.useCallback(() => {
       return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
+        ? setOpenMobile((prevOpen) => !prevOpen) // Toggle based on previous state for mobile
+        : setOpen((prevOpen) => !prevOpen);      // Toggle based on previous state for desktop
     }, [isMobile, setOpen, setOpenMobile])
+
 
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
@@ -247,18 +248,18 @@ const Sidebar = React.forwardRef<
         data-collapsible={collapsible} // Explicitly set the collapsible mode
         data-variant={variant}
         data-side={side}
-         // Add transition for smooth width change
-         style={{ transition: 'width 0.2s ease-linear' }}
+         // Add transition for smooth width/transform change
+         style={{ transition: 'width 0.2s ease-linear, transform 0.2s ease-linear' }}
         {...props} // Pass remaining props here
       >
         {/* Desktop Sidebar Structure */}
         <div
             className={cn(
-                "fixed inset-y-0 z-10 flex h-svh flex-col bg-sidebar text-sidebar-foreground transition-[width,left,right] duration-200 ease-linear",
+                "fixed inset-y-0 z-10 flex h-svh flex-col bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-linear", // Added transform to transitions
                 side === "left" ? "left-0 border-r border-sidebar-border" : "right-0 border-l border-sidebar-border", // Position and border color
                 state === "expanded" ? "w-[--sidebar-width]" : (collapsible === 'icon' ? "w-[--sidebar-width-icon]" : "w-0 border-none"), // Width based on state and collapsible mode
-                 // Handle offcanvas hiding - simplified
-                 collapsible === 'offcanvas' && state === 'collapsed' && (side === 'left' ? '-translate-x-full' : 'translate-x-full'),
+                 // Handle offcanvas hiding with translate
+                 collapsible === 'offcanvas' && state === 'collapsed' && (side === 'left' ? '-translate-x-full border-none' : 'translate-x-full border-none'),
                 className // Allow overriding styles
             )}
         >
@@ -271,7 +272,7 @@ const Sidebar = React.forwardRef<
             <div
               className={cn(
                 "hidden md:block transition-[width] duration-200 ease-linear",
-                 state === "expanded" ? "w-[--sidebar-width]" : "w-[--sidebar-width-icon]"
+                 state === "expanded" ? "w-[--sidebar-width]" : (collapsible === 'icon' ? "w-[--sidebar-width-icon]" : "w-0") // Use w-0 for collapsed icon mode spacer too
                  // Offcanvas collapsed case handled by the outer condition
               )}
             />
@@ -289,7 +290,10 @@ const SidebarTrigger = React.forwardRef<
 >(({ className, onClick, asChild, ...props }, ref) => {
   const { toggleSidebar, isMobile } = useSidebar();
 
-  // Use a regular button on both mobile and desktop
+  // Don't render on mobile, SheetTrigger is used instead
+  if (isMobile) return null;
+
+  // Use a regular button on desktop
   return (
         <Button
             ref={ref}
@@ -297,13 +301,12 @@ const SidebarTrigger = React.forwardRef<
             variant="ghost"
             size="icon"
             className={cn(
-                "flex", // Always flex by default
-                isMobile ? "md:hidden" : "hidden md:flex", // Conditional visibility
+                "hidden md:flex", // Only show on desktop
                 className
              )}
              onClick={(event) => {
                 onClick?.(event);
-                toggleSidebar(); // Toggle sidebar state (mobile or desktop)
+                toggleSidebar(); // Toggle sidebar state (desktop only)
              }}
             {...props} // Pass remaining props
             >
@@ -359,36 +362,34 @@ const SidebarInset = React.forwardRef<
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background transition-[margin-left,margin-right] duration-200 ease-linear",
 
-        // Default padding for expanded state (all modes except none)
-        "md:peer-data-[side=left]:peer-data-[state=expanded]:pl-[--sidebar-width]",
-        "md:peer-data-[side=right]:peer-data-[state=expanded]:pr-[--sidebar-width]",
+        // Default margin for expanded state (all modes except none)
+        "md:peer-data-[side=left]:peer-data-[state=expanded]:ml-[--sidebar-width]",
+        "md:peer-data-[side=right]:peer-data-[state=expanded]:mr-[--sidebar-width]",
 
-        // Padding for icon collapsed state
-        "md:peer-data-[side=left]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:pl-[--sidebar-width-icon]",
-        "md:peer-data-[side=right]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:pr-[--sidebar-width-icon]",
+        // Margin for icon collapsed state
+        "md:peer-data-[side=left]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:ml-[--sidebar-width-icon]",
+        "md:peer-data-[side=right]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:mr-[--sidebar-width-icon]",
 
-        // No padding for offcanvas collapsed state
-        "md:peer-data-[side=left]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:pl-0",
-        "md:peer-data-[side=right]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:pr-0",
+        // No margin for offcanvas collapsed state
+        "md:peer-data-[side=left]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:ml-0",
+        "md:peer-data-[side=right]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:mr-0",
 
-        // Padding for collapsible=none mode
-        "md:peer-data-[side=left]:peer-data-[collapsible=none]:pl-[--sidebar-width]",
-        "md:peer-data-[side=right]:peer-data-[collapsible=none]:pr-[--sidebar-width]",
+        // Margin for collapsible=none mode
+        "md:peer-data-[side=left]:peer-data-[collapsible=none]:ml-[--sidebar-width]",
+        "md:peer-data-[side=right]:peer-data-[collapsible=none]:mr-[--sidebar-width]",
 
 
-        // Inset variant adjustments (apply margin and rounding)
+        // Inset variant adjustments (apply margin and rounding) - Keep these as they are
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
-
         // Adjust inset margins based on state and mode (left side example)
         "md:peer-data-[variant=inset]:peer-data-[side=left]:peer-data-[state=expanded]:ml-[calc(var(--sidebar-width)_+_theme(spacing.2))]",
         "md:peer-data-[variant=inset]:peer-data-[side=left]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:ml-[calc(var(--sidebar-width-icon)_+_theme(spacing.2))]",
-        "md:peer-data-[variant=inset]:peer-data-[side=left]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:ml-2",
+        "md:peer-data-[variant=inset]:peer-data-[side=left]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:ml-2", // Keep ml-2 for inset offcanvas
         "md:peer-data-[variant=inset]:peer-data-[side=left]:peer-data-[collapsible=none]:ml-[calc(var(--sidebar-width)_+_theme(spacing.2))]",
-
          // Adjust inset margins based on state and mode (right side example)
         "md:peer-data-[variant=inset]:peer-data-[side=right]:peer-data-[state=expanded]:mr-[calc(var(--sidebar-width)_+_theme(spacing.2))]",
         "md:peer-data-[variant=inset]:peer-data-[side=right]:peer-data-[collapsible=icon]:peer-data-[state=collapsed]:mr-[calc(var(--sidebar-width-icon)_+_theme(spacing.2))]",
-        "md:peer-data-[variant=inset]:peer-data-[side=right]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:mr-2",
+        "md:peer-data-[variant=inset]:peer-data-[side=right]:peer-data-[collapsible=offcanvas]:peer-data-[state=collapsed]:mr-2", // Keep mr-2 for inset offcanvas
         "md:peer-data-[variant=inset]:peer-data-[side=right]:peer-data-[collapsible=none]:mr-[calc(var(--sidebar-width)_+_theme(spacing.2))]",
 
 
@@ -621,7 +622,8 @@ const sidebarMenuButtonVariants = cva(
   "peer/menu-button flex w-full items-center justify-start gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors duration-100 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
   // Icon and Offcanvas specific styles for collapsed state
   "group-data-[collapsible=icon]:group-data-[state=collapsed]:justify-center group-data-[collapsible=icon]:group-data-[state=collapsed]:size-9 group-data-[collapsible=icon]:group-data-[state=collapsed]:p-0",
-  "group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:hidden", // Hide buttons completely if offcanvas collapsed
+  // Hide text span in offcanvas collapsed state, but keep icon
+  "group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:justify-center group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:size-9 group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:p-0 group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:[&>span]:sr-only",
   "[&>span]:transition-opacity group-data-[collapsible=icon]:group-data-[state=collapsed]:[&>span]:sr-only", // Hide text in icon collapsed mode
   "[&>svg]:size-4 [&>svg]:shrink-0",
   {
@@ -634,7 +636,7 @@ const sidebarMenuButtonVariants = cva(
       size: {
         default: "h-9 text-sm", // Adjusted default height slightly
         sm: "h-8 text-xs", // Adjusted small height
-        lg: "h-11 text-sm group-data-[collapsible=icon]:group-data-[state=collapsed]:!size-10", // Adjusted large height and icon mode size
+        lg: "h-11 text-sm group-data-[collapsible=icon]:group-data-[state=collapsed]:!size-10 group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:!size-10", // Adjusted large height and icon/offcanvas mode size
       },
     },
     defaultVariants: {
@@ -671,7 +673,7 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state, collapsible } = useSidebar()
 
     const isCollapsed = state === 'collapsed' && (collapsible === 'icon' || collapsible === 'offcanvas');
-    const showTooltip = tooltip && isCollapsed && collapsible === 'icon' && !isMobile; // Only show tooltip for icon mode collapsed
+    const showTooltip = tooltip && isCollapsed && !isMobile; // Show tooltip for both icon and offcanvas collapsed
 
 
      const buttonContent = (
@@ -795,10 +797,11 @@ const SidebarMenuSkeleton = React.forwardRef<
 
   const isCollapsed = state === 'collapsed' && (collapsible === 'icon' || collapsible === 'offcanvas');
   const isIconModeCollapsed = collapsible === 'icon' && state === 'collapsed';
+  const isOffcanvasCollapsed = collapsible === 'offcanvas' && state === 'collapsed';
 
 
-   // Hide skeleton if offcanvas collapsed
-    if (collapsible === 'offcanvas' && state === 'collapsed') {
+   // Hide skeleton if offcanvas collapsed completely
+    if (isOffcanvasCollapsed) {
         return null;
     }
 
@@ -819,7 +822,7 @@ const SidebarMenuSkeleton = React.forwardRef<
           data-sidebar="menu-skeleton-icon"
         />
       )}
-       {!isIconModeCollapsed && ( // Only show text skeleton if not icon collapsed
+       {!isCollapsed && ( // Only show text skeleton if not collapsed (icon or offcanvas)
         <Skeleton
             className="h-4 flex-1 max-w-[--skeleton-width]"
             data-sidebar="menu-skeleton-text"

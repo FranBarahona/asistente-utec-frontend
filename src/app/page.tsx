@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, LogOut, FileText, MessageSquare } from 'lucide-react'; // Added LogOut, FileText, MessageSquare
+import { Send, LogOut, FileText, MessageSquare, PanelLeft } from 'lucide-react'; // Added LogOut, FileText, MessageSquare, PanelLeft
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import ManageDocuments from '@/components/manage-documents';
+import { Sheet, SheetTrigger } from '@/components/ui/sheet'; // Import SheetTrigger
 
 interface Message {
   text: string;
@@ -83,6 +84,7 @@ const AppContent: React.FC = () => {
     let i = 0;
     let currentTypedText = '';
     setIsTyping(true);
+    // Add a new message object specifically for typing indication
     setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
 
     const intervalId = setInterval(() => {
@@ -90,9 +92,11 @@ const AppContent: React.FC = () => {
         currentTypedText += text[i];
         setMessages(prev => {
            const newMessages = [...prev];
-           const lastMessage = newMessages[newMessages.length - 1];
-           if (lastMessage && lastMessage.isTyping) {
-             lastMessage.text = currentTypedText + '...';
+           // Find the last message that is marked as typing
+           const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
+           if (typingMessageIndex !== -1) {
+             // Update the text of the typing message
+             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' };
            }
            return newMessages;
         });
@@ -102,17 +106,19 @@ const AppContent: React.FC = () => {
         setIsTyping(false);
         setMessages(prev => {
           const newMessages = [...prev];
-           const lastMessage = newMessages[newMessages.length - 1];
-           if (lastMessage && lastMessage.isTyping) {
-             lastMessage.text = currentTypedText;
-             lastMessage.isTyping = false; // Correctly set isTyping to false
+           // Find the last message that was marked as typing
+           const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
+           if (typingMessageIndex !== -1) {
+             // Finalize the message text and remove the typing indicator
+             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
            }
            return newMessages;
         });
-        callback(currentTypedText);
+        callback(currentTypedText); // Call the callback with the final text
       }
-    }, 50);
+    }, 50); // Typing speed
   };
+
 
   const handleSendMessage = async () => {
     if (input.trim() !== '' && !isTyping && isLoggedIn) { // Only send if logged in
@@ -130,9 +136,11 @@ const AppContent: React.FC = () => {
         }
 
         const data = await response.json();
-        const aiResponseText = data.message;
+        // Ensure data.message exists and is a string
+        const aiResponseText = data?.message;
 
         if (typeof aiResponseText !== 'string') {
+            console.error("Invalid response format from API:", data);
             throw new Error("Invalid response format from API or message is not a string");
         }
 
@@ -149,6 +157,7 @@ const AppContent: React.FC = () => {
         });
          // Add a non-typing message to indicate the error
          setMessages(prev => [...prev, { text: 'Sorry, I could not get a response.', isUser: false }]);
+         setIsTyping(false); // Ensure typing state is reset on error
       }
     } else if (!isLoggedIn) {
         toast({
@@ -165,6 +174,9 @@ const AppContent: React.FC = () => {
       description: "Simulating Microsoft OAuth flow...",
     });
 
+    // Simulate getting email after OAuth flow
+    // In a real app, this would involve redirecting to Microsoft, handling the callback,
+    // and getting user info (including email) from the response.
     const simulatedEmail = prompt("Enter your UTEC email for simulation (e.g., estefany.perez@mail.utec.edu.sv or 2715282023@mail.utec.edu.sv):");
 
     if (simulatedEmail) {
@@ -206,6 +218,7 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Simple Microsoft logo SVG component
   const MicrosoftIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       <path d="M11.57 3H2.01001C1.27501 3 0.700012 3.79 0.700012 4.53V12H11.57V3Z" fill="#f25022"/>
@@ -275,18 +288,31 @@ const AppContent: React.FC = () => {
   return (
     <>
       <Toaster />
-      {/* Place SidebarTrigger outside SidebarInset */}
-      <div className="absolute top-4 left-4 z-20">
-        <SidebarTrigger />
-      </div>
+      {/* Sidebar Trigger - position fixed for visibility */}
+       <div className="fixed top-4 left-4 z-20">
+         {/* Use SheetTrigger for mobile */}
+         {sidebarContext?.isMobile && (
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <PanelLeft />
+                    <span className="sr-only">Toggle Sidebar</span>
+                </Button>
+            </SheetTrigger>
+         )}
+         {/* Use SidebarTrigger for desktop */}
+          {!sidebarContext?.isMobile && <SidebarTrigger />}
+       </div>
+
       <div className="flex h-screen w-screen bg-background">
 
-        <Sidebar collapsible="icon">
+        {/* Set collapsible to "offcanvas" */}
+        <Sidebar collapsible="offcanvas">
           <SidebarContent>
              <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                     <div className="flex flex-col items-center gap-2 w-full">
                         <Avatar className="h-12 w-12">
+                         {/* Using a placeholder/generator for avatar based on email */}
                          <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
                          <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
@@ -303,7 +329,7 @@ const AppContent: React.FC = () => {
                     <SidebarMenuButton
                       onClick={() => setCurrentView('chat')}
                       isActive={currentView === 'chat'}
-                      tooltip={{ children: "Chat" }}
+                      tooltip={{ children: "Chat" }} // Tooltip for collapsed state
                     >
                       <MessageSquare />
                       <span>Chat</span>
@@ -314,7 +340,7 @@ const AppContent: React.FC = () => {
                       <SidebarMenuButton
                         onClick={() => setCurrentView('documents')}
                         isActive={currentView === 'documents'}
-                        tooltip={{ children: "Manage Documents" }}
+                        tooltip={{ children: "Manage Documents" }} // Tooltip for collapsed state
                       >
                         <FileText />
                         <span>Manage Documents</span>
@@ -346,10 +372,13 @@ const AppContent: React.FC = () => {
           </SidebarContent>
         </Sidebar>
 
+        {/* Main content area pushed by the sidebar */}
         <SidebarInset>
           <div className="flex flex-col flex-grow items-center justify-center p-4 pt-16 h-full">
+            {/* Render content based on currentView */}
             {currentView === 'chat' && <ChatInterface />}
             {currentView === 'documents' && userRole === 'admin' && <ManageDocuments />}
+            {/* Show permission error if non-admin tries to access documents */}
              {currentView === 'documents' && userRole !== 'admin' && (
                 <div className="text-center text-destructive p-4">
                     You do not have permission to access this page.
@@ -366,6 +395,7 @@ const AppContent: React.FC = () => {
 // Main export wraps content in SidebarProvider
 export default function Home() {
   return (
+    // defaultOpen={false} makes the sidebar closed by default on desktop
     <SidebarProvider defaultOpen={false}>
        <AppContent />
     </SidebarProvider>
