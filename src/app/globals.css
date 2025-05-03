@@ -40,7 +40,7 @@ body {
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 220 13% 91%; /* Added specific sidebar border variable */
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
@@ -74,7 +74,7 @@ body {
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 240 3.7% 15.9%; /* Added specific sidebar border variable */
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -84,3 +84,10 @@ body {
  * to the body. This is now handled directly by Tailwind via the theme
  * configuration in tailwind.config.ts using direct HSL values.
  */
+
+@layer components {
+  /* Add a utility class for sidebar borders */
+  .border-sidebar-border {
+    border-color: hsl(var(--sidebar-border));
+  }
+}
