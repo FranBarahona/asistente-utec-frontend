@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, LogOut, FileText, MessageSquare, PanelLeft } from 'lucide-react'; // Added LogOut, FileText, MessageSquare, PanelLeft
+import { Send, LogOut, FileText, MessageSquare, PanelLeft } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import ManageDocuments from '@/components/manage-documents';
-import { Sheet, SheetTrigger } from '@/components/ui/sheet'; // Import SheetTrigger
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface Message {
   text: string;
@@ -84,7 +84,6 @@ const AppContent: React.FC = () => {
     let i = 0;
     let currentTypedText = '';
     setIsTyping(true);
-    // Add a new message object specifically for typing indication
     setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
 
     const intervalId = setInterval(() => {
@@ -92,10 +91,8 @@ const AppContent: React.FC = () => {
         currentTypedText += text[i];
         setMessages(prev => {
            const newMessages = [...prev];
-           // Find the last message that is marked as typing
            const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
            if (typingMessageIndex !== -1) {
-             // Update the text of the typing message
              newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' };
            }
            return newMessages;
@@ -106,22 +103,20 @@ const AppContent: React.FC = () => {
         setIsTyping(false);
         setMessages(prev => {
           const newMessages = [...prev];
-           // Find the last message that was marked as typing
            const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
            if (typingMessageIndex !== -1) {
-             // Finalize the message text and remove the typing indicator
              newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
            }
            return newMessages;
         });
-        callback(currentTypedText); // Call the callback with the final text
+        callback(currentTypedText);
       }
-    }, 50); // Typing speed
+    }, 50);
   };
 
 
   const handleSendMessage = async () => {
-    if (input.trim() !== '' && !isTyping && isLoggedIn) { // Only send if logged in
+    if (input.trim() !== '' && !isTyping && isLoggedIn) {
       const userMessageText = input;
       const userMessage = { text: userMessageText, isUser: true };
       setMessages(prevMessages => [...prevMessages, userMessage]);
@@ -140,7 +135,6 @@ const AppContent: React.FC = () => {
         }
 
         const data = await response.json();
-        // Ensure data.message exists and is a string
         const aiResponseText = data?.message;
 
         if (typeof aiResponseText !== 'string') {
@@ -156,12 +150,11 @@ const AppContent: React.FC = () => {
         console.error("Error fetching AI response:", error);
         toast({
           title: "Error",
-          description: `Failed to get response from AI: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+          description: `Failed to get response from AI: ${error instanceof Error ? error.message : String(error)}. Please try again.`,
           variant: "destructive",
         });
-         // Add a non-typing message to indicate the error
          setMessages(prev => [...prev, { text: 'Sorry, I could not get a response.', isUser: false }]);
-         setIsTyping(false); // Ensure typing state is reset on error
+         setIsTyping(false);
       }
     } else if (!isLoggedIn) {
         toast({
@@ -172,35 +165,40 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleMicrosoftLogin = () => {
+  const handleMicrosoftLogin = async () => {
     toast({
       title: "Microsoft Login",
-      description: "Simulating Microsoft OAuth flow...",
+      description: "Attempting Microsoft OAuth flow...",
     });
 
-    // Simulate getting email after OAuth flow
-    // In a real app, this would involve redirecting to Microsoft, handling the callback,
-    // and getting user info (including email) from the response.
-    const simulatedEmail = prompt("Enter your UTEC email for simulation (e.g., estefany.perez@mail.utec.edu.sv or 2715282023@mail.utec.edu.sv):");
+    try {
+      const response = await fetch('/api/auth/microsoft/login', { method: 'POST' });
+      const data = await response.json();
 
-    if (simulatedEmail) {
-      setUserEmail(simulatedEmail);
+      if (!response.ok || !data.email) {
+        throw new Error(data.error || "Login failed. No email received.");
+      }
+
+      const receivedEmail = data.email;
+      setUserEmail(receivedEmail);
       setIsLoggedIn(true);
-      const role = determineUserRole(simulatedEmail);
+      const role = determineUserRole(receivedEmail);
       setUserRole(role);
-      setCurrentView('chat'); // Reset view to chat on login
+      setCurrentView('chat');
       toast({
         title: "Login Successful",
-        description: `Logged in as ${simulatedEmail} (${role}).`,
+        description: `Logged in as ${receivedEmail} (${role}).`,
       });
-       // Close mobile sidebar after login if it's open
+
       if (sidebarContext?.isMobile && sidebarContext?.openMobile) {
         sidebarContext?.setOpenMobile(false);
       }
-    } else {
-       toast({
-        title: "Login Cancelled",
-        description: "Email entry cancelled.",
+
+    } catch (error) {
+      console.error("Microsoft Login Error:", error);
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
     }
@@ -210,19 +208,17 @@ const AppContent: React.FC = () => {
     setUserEmail(null);
     setIsLoggedIn(false);
     setUserRole('guest');
-    setMessages([]); // Clear messages on logout
-    setCurrentView('chat'); // Reset view
+    setMessages([]);
+    setCurrentView('chat');
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
-     // Close mobile sidebar after logout if it's open
     if (sidebarContext?.isMobile && sidebarContext?.openMobile) {
       sidebarContext?.setOpenMobile(false);
     }
   };
 
-  // Simple Microsoft logo SVG component
   const MicrosoftIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       <path d="M11.57 3H2.01001C1.27501 3 0.700012 3.79 0.700012 4.53V12H11.57V3Z" fill="#f25022"/>
@@ -257,9 +253,9 @@ const AppContent: React.FC = () => {
                    message.isUser
                      ? 'bg-primary text-primary-foreground'
                      : 'bg-secondary text-secondary-foreground'
-                 } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`} // Added animate-pulse
+                 } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`}
                >
-                 {message.text || (message.isTyping ? '...' : '')} {/* Ensure typing state shows something */}
+                 {message.text || (message.isTyping ? '...' : '')}
                </div>
              </div>
            ))}
@@ -292,18 +288,77 @@ const AppContent: React.FC = () => {
   return (
     <>
       <Toaster />
-      {/* Sidebar Trigger - position fixed for visibility */}
        <div className="fixed top-4 left-4 z-20">
-         {/* Use SheetTrigger for mobile */}
          {sidebarContext?.isMobile ? (
-            <Sheet>
+            <Sheet open={sidebarContext.openMobile} onOpenChange={sidebarContext.setOpenMobile}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
                         <PanelLeft />
                         <span className="sr-only">Toggle Sidebar</span>
                     </Button>
                 </SheetTrigger>
-                {/* Mobile SheetContent is rendered inside Sidebar component */}
+                 <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
+                    {/* Mobile sidebar content is duplicated here for SheetContent */}
+                     <SidebarHeader className="items-center">
+                        {isLoggedIn && userEmail && (
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <Avatar className="h-12 w-12">
+                                 <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
+                                 <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium text-center break-all px-2">{userEmail}</span>
+                                <span className="text-xs text-muted-foreground">{userRole}</span>
+                            </div>
+                        )}
+                     </SidebarHeader>
+                     <Separator className="my-2" />
+                    <SidebarMenu className="flex-grow">
+                      {isLoggedIn && (
+                        <>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              onClick={() => { setCurrentView('chat'); sidebarContext.setOpenMobile(false);}}
+                              isActive={currentView === 'chat'}
+                              tooltip={{ children: "Chat" }}
+                            >
+                              <MessageSquare />
+                              <span>Chat</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          {userRole === 'admin' && (
+                            <SidebarMenuItem>
+                              <SidebarMenuButton
+                                onClick={() => {setCurrentView('documents'); sidebarContext.setOpenMobile(false);}}
+                                isActive={currentView === 'documents'}
+                                tooltip={{ children: "Manage Documents" }}
+                              >
+                                <FileText />
+                                <span>Manage Documents</span>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          )}
+                        </>
+                      )}
+                    </SidebarMenu>
+                     <Separator className="my-2" />
+                     <SidebarFooter>
+                        {isLoggedIn ? (
+                             <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={handleLogout} tooltip={{ children: "Logout" }}>
+                                        <LogOut />
+                                        <span>Logout</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        ) : (
+                            <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft" className="w-full">
+                                <MicrosoftIcon />
+                                <span className="ml-2">Login with Microsoft</span>
+                            </Button>
+                        )}
+                     </SidebarFooter>
+                </SheetContent>
             </Sheet>
          ) : (
             <SidebarTrigger />
@@ -311,15 +366,12 @@ const AppContent: React.FC = () => {
        </div>
 
       <div className="flex h-screen w-screen bg-background">
-
-        {/* Set collapsible to "offcanvas" */}
         <Sidebar collapsible="offcanvas">
           <SidebarContent>
              <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                     <div className="flex flex-col items-center gap-2 w-full">
                         <Avatar className="h-12 w-12">
-                         {/* Using a placeholder/generator for avatar based on email */}
                          <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
                          <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
@@ -336,7 +388,7 @@ const AppContent: React.FC = () => {
                     <SidebarMenuButton
                       onClick={() => setCurrentView('chat')}
                       isActive={currentView === 'chat'}
-                      tooltip={{ children: "Chat" }} // Tooltip for collapsed state
+                      tooltip={{ children: "Chat" }}
                     >
                       <MessageSquare />
                       <span>Chat</span>
@@ -347,7 +399,7 @@ const AppContent: React.FC = () => {
                       <SidebarMenuButton
                         onClick={() => setCurrentView('documents')}
                         isActive={currentView === 'documents'}
-                        tooltip={{ children: "Manage Documents" }} // Tooltip for collapsed state
+                        tooltip={{ children: "Manage Documents" }}
                       >
                         <FileText />
                         <span>Manage Documents</span>
@@ -374,18 +426,14 @@ const AppContent: React.FC = () => {
                         <span className="ml-2">Login with Microsoft</span>
                     </Button>
                 )}
-
              </SidebarFooter>
           </SidebarContent>
         </Sidebar>
 
-        {/* Main content area pushed by the sidebar */}
         <SidebarInset>
           <div className="flex flex-col flex-grow items-center justify-center p-4 pt-16 h-full">
-            {/* Render content based on currentView */}
             {currentView === 'chat' && <ChatInterface />}
             {currentView === 'documents' && userRole === 'admin' && <ManageDocuments />}
-            {/* Show permission error if non-admin tries to access documents */}
              {currentView === 'documents' && userRole !== 'admin' && (
                 <div className="text-center text-destructive p-4">
                     You do not have permission to access this page.
@@ -398,13 +446,12 @@ const AppContent: React.FC = () => {
   );
 };
 
-
-// Main export wraps content in SidebarProvider
 export default function Home() {
   return (
-    // defaultOpen={false} makes the sidebar closed by default on desktop
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={false} collapsible="offcanvas">
        <AppContent />
     </SidebarProvider>
   );
 }
+
+    
