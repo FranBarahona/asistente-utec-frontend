@@ -166,13 +166,35 @@ const AppContent: React.FC = () => {
   };
 
   const handleMicrosoftLogin = async () => {
+    // Abre inmediatamente el popup
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.innerWidth - width) / 2;
+      const top = window.screenY + (window.innerHeight - height) / 2;
+
+      const popup = window.open(
+        "",
+        "MicrosoftLoginPopup",
+        `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
+      );
+    
+    // const popup = window.open("", "MicrosoftLoginPopup", "width=600,height=700");
+
+    if (!popup) {
+      toast({
+        title: "Popup blocked",
+        description: "Please allow popups for this site.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Microsoft Login",
-      description: "Opening Microsoft OAuth popup...",
+      description: "Waiting for Microsoft OAuth...",
     });
 
     try {
-      // Solicita la URL de autenticación al backend
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`, { method: 'GET' });
       const data = await response.json();
 
@@ -180,32 +202,20 @@ const AppContent: React.FC = () => {
         throw new Error(data.error || "Login failed. No redirect URL received.");
       }
 
-      // Abre un popup con la URL de autenticación
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.innerWidth - width) / 2;
-      const top = window.screenY + (window.innerHeight - height) / 2;
+      // Redirige el popup a la URL recibida
+      popup.location.href = data.redirectUrl;
+     
 
-      const popup = window.open(
-        data.redirectUrl,
-        "MicrosoftLoginPopup",
-        `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups for this site.");
-      }
-
-      // Escuchar el mensaje de respuesta desde el popup
+      // Escucha el mensaje del popup (cuando cierre y envíe los datos)
       window.addEventListener("message", (event) => {
-        if (event.origin !== process.env.BACKEND_URL) return; // Seguridad: validar origen
+        console.log("🚀 ~ window.addEventListener ~ event:", event)
+        if (event.origin !== process.env.NEXT_PUBLIC_BACKEND_URL) return;
 
         const { email, error } = event.data;
         if (error) {
           throw new Error(error);
         }
 
-        // Procesar el email recibido
         setUserEmail(email);
         setIsLoggedIn(true);
         const role = determineUserRole(email);
@@ -214,7 +224,7 @@ const AppContent: React.FC = () => {
 
         toast({
           title: "Login Successful",
-          description: `Logged in as ${email} (${role}).`,
+          description: `Logged in as ${email} (${role})`,
         });
 
         popup.close();
@@ -222,6 +232,7 @@ const AppContent: React.FC = () => {
 
     } catch (error) {
       console.error("Microsoft Login Error:", error);
+      popup.close();
       toast({
         title: "Login Failed",
         description: error instanceof Error ? error.message : String(error),
@@ -229,69 +240,6 @@ const AppContent: React.FC = () => {
       });
     }
   };
-
-  // const handleMicrosoftLogin = async () => {
-  //   // Abre inmediatamente el popup
-  //   const popup = window.open("", "MicrosoftLoginPopup", "width=600,height=700");
-
-  //   if (!popup) {
-  //     toast({
-  //       title: "Popup blocked",
-  //       description: "Please allow popups for this site.",
-  //       variant: "destructive",
-  //     });
-  //     return;
-  //   }
-
-  //   toast({
-  //     title: "Microsoft Login",
-  //     description: "Waiting for Microsoft OAuth...",
-  //   });
-
-  //   try {
-  //     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`, { method: 'GET' });
-  //     const data = await response.json();
-
-  //     if (!response.ok || !data.redirectUrl) {
-  //       throw new Error(data.error || "Login failed. No redirect URL received.");
-  //     }
-
-  //     // Redirige el popup a la URL recibida
-  //     popup.location.href = data.redirectUrl;
-
-  //     // Escucha el mensaje del popup (cuando cierre y envíe los datos)
-  //     window.addEventListener("message", (event) => {
-  //       if (event.origin !== process.env.NEXT_PUBLIC_BACKEND_URL) return;
-
-  //       const { email, error } = event.data;
-  //       if (error) {
-  //         throw new Error(error);
-  //       }
-
-  //       setUserEmail(email);
-  //       setIsLoggedIn(true);
-  //       const role = determineUserRole(email);
-  //       setUserRole(role);
-  //       setCurrentView("chat");
-
-  //       toast({
-  //         title: "Login Successful",
-  //         description: `Logged in as ${email} (${role})`,
-  //       });
-
-  //       popup.close();
-  //     });
-
-  //   } catch (error) {
-  //     console.error("Microsoft Login Error:", error);
-  //     popup.close();
-  //     toast({
-  //       title: "Login Failed",
-  //       description: error instanceof Error ? error.message : String(error),
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
 
   const handleLogout = () => {
     setUserEmail(null);
