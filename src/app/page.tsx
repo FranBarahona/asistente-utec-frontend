@@ -293,7 +293,7 @@ const AppContent: React.FC = () => {
       if (!backendUrl) {
         throw new Error("Backend URL is not configured.");
       }
-      const response = await fetch(`${backendUrl}/auth/microsoft/login`, { method: 'GET' });
+      const response = await fetch(`${backendUrl}/microsoft/login`, { method: 'GET' });
       const data = await response.json();
 
       if (!response.ok || !data.redirectUrl) {
