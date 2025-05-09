@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -38,18 +37,99 @@ type CurrentView = 'chat' | 'documents';
 // Helper function to determine user role based on email
 const determineUserRole = (email: string | null): UserRole => {
   if (!email) return 'guest';
-  // Admin pattern: name.lastname@mail.utec.edu.sv
   if (/^[a-zA-Z]+\.[a-zA-Z]+@mail\.utec\.edu\.sv$/.test(email)) {
     return 'admin';
   }
-  // Student pattern: 8digits@mail.utec.edu.sv
   if (/^\d{8}@mail\.utec\.edu\.sv$/.test(email)) {
     return 'student';
   }
-  return 'guest'; // Default to guest if no pattern matches
+  return 'guest';
 };
 
-// New component to hold the main application content and structure
+const MicrosoftIcon: React.FC = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11.57 3H2.01001C1.27501 3 0.700012 3.79 0.700012 4.53V12H11.57V3Z" fill="#f25022" />
+    <path d="M23.3 3H12.43V12H23.3C23.7 12 24 11.71 24 11.27V4.53C24 3.79 23.72 3 23.3 3Z" fill="#7fba00" />
+    <path d="M11.57 21V12.8H0.700012V19.47C0.700012 20.21 1.28001 21 2.01001 21H11.57Z" fill="#00a4ef" />
+    <path d="M23.3 21H12.43V12.8H24V19.47C24 20.21 23.7 21 23.3 21Z" fill="#ffb900" />
+  </svg>
+);
+
+interface ChatInterfaceProps {
+  messages: Message[];
+  input: string;
+  isTyping: boolean;
+  isLoggedIn: boolean;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSendMessage: () => void;
+  onInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  scrollAreaRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+}
+
+const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
+  messages,
+  input,
+  isTyping,
+  isLoggedIn,
+  onInputChange,
+  onSendMessage,
+  onInputKeyDown,
+  scrollAreaRef,
+  messagesEndRef
+}) => {
+  return (
+    <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
+      <div className="flex items-center p-4 border-b">
+        <h1 className="text-xl font-bold text-center flex-grow">Chat Utec</h1>
+      </div>
+
+      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+        <div className="space-y-4">
+          {!isLoggedIn && (
+            <div className="text-center text-muted-foreground p-4">
+              Please log in to start chatting.
+            </div>
+          )}
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
+                }`}
+            >
+              <div
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${message.isUser
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground'
+                  } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`}
+              >
+                {message.text || (message.isTyping ? '...' : '')}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      <div className="flex items-center p-4 border-t">
+        <Input
+          type="text"
+          placeholder={isLoggedIn ? "Type your message..." : "Log in to chat"}
+          className="flex-grow mr-2"
+          value={input}
+          onChange={onInputChange}
+          onKeyDown={onInputKeyDown}
+          disabled={isTyping || !isLoggedIn}
+        />
+        <Button onClick={onSendMessage} aria-label="Send message" disabled={isTyping || !isLoggedIn}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+
 const AppContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -58,16 +138,13 @@ const AppContent: React.FC = () => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Authentication and Role State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('guest');
-  const [currentView, setCurrentView] = useState<CurrentView>('chat'); // Default view
+  const [currentView, setCurrentView] = useState<CurrentView>('chat');
 
-  // Get sidebar context - NOW SAFE TO CALL HERE
   const sidebarContext = useSidebar();
 
-  // Update role whenever email changes
   useEffect(() => {
     setUserRole(determineUserRole(userEmail));
   }, [userEmail]);
@@ -125,13 +202,21 @@ const AppContent: React.FC = () => {
       try {
         const apiUrlBase = process.env.NEXT_PUBLIC_BACKEND_URL;
         if (!apiUrlBase) {
-          throw new Error("API URL is not configured in environment variables.");
+          toast({
+            title: "API Error",
+            description: "API URL is not configured.",
+            variant: "destructive",
+          });
+          setMessages(prev => [...prev, { text: 'Sorry, API is not configured.', isUser: false }]);
+          setIsTyping(false); // Ensure typing indicator is turned off
+          return;
         }
         const apiUrl = `${apiUrlBase}/document/ask?query=${encodeURIComponent(userMessageText)}`;
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
+          const errorData = await response.json().catch(() => ({ message: `API request failed with status ${response.status}` }));
+          throw new Error(errorData.message || `API request failed with status ${response.status}`);
         }
 
         const data = await response.json();
@@ -148,12 +233,13 @@ const AppContent: React.FC = () => {
 
       } catch (error) {
         console.error("Error fetching AI response:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         toast({
           title: "Error",
-          description: `Failed to get response from AI: ${error instanceof Error ? error.message : String(error)}. Please try again.`,
+          description: `Failed to get response from AI: ${errorMessage}. Please try again.`,
           variant: "destructive",
         });
-        setMessages(prev => [...prev, { text: 'Sorry, I could not get a response.', isUser: false }]);
+        setMessages(prev => [...prev, { text: `Sorry, I could not get a response. ${errorMessage}`, isUser: false }]);
         setIsTyping(false);
       }
     } else if (!isLoggedIn) {
@@ -164,21 +250,29 @@ const AppContent: React.FC = () => {
       });
     }
   };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   const handleMicrosoftLogin = async () => {
-    // Abre inmediatamente el popup
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.innerWidth - width) / 2;
-      const top = window.screenY + (window.innerHeight - height) / 2;
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
 
-      const popup = window.open(
-        "",
-        "MicrosoftLoginPopup",
-        `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
-      );
-    
-    // const popup = window.open("", "MicrosoftLoginPopup", "width=600,height=700");
+    const popup = window.open(
+      "",
+      "MicrosoftLoginPopup",
+      `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
+    );
 
     if (!popup) {
       toast({
@@ -195,44 +289,76 @@ const AppContent: React.FC = () => {
     });
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`, { method: 'GET' });
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("Backend URL is not configured.");
+      }
+      const response = await fetch(`${backendUrl}/auth/microsoft/login`, { method: 'GET' });
       const data = await response.json();
 
       if (!response.ok || !data.redirectUrl) {
         throw new Error(data.error || "Login failed. No redirect URL received.");
       }
 
-      // Redirige el popup a la URL recibida
       popup.location.href = data.redirectUrl;
-     
 
-      // Escucha el mensaje del popup (cuando cierre y envíe los datos)
-      window.addEventListener("message", (event) => {
-        console.log("🚀 ~ window.addEventListener ~ event:", event)
-        if (event.origin !== process.env.NEXT_PUBLIC_BACKEND_URL) return;
+      const messageListener = (event: MessageEvent) => {
+        // Ensure the message is from the expected origin (your backend that serves the success page)
+        // This origin might need to be the same as your backendUrl or a specific success redirect URL origin
+        // For now, let's assume it's the backendUrl or be more flexible if needed.
+        // IMPORTANT: Ensure event.origin is validated properly in a production environment.
+        // if (event.origin !== backendUrl) return; // Example validation, adjust if necessary
 
-        const { email, error } = event.data;
-        if (error) {
-          throw new Error(error);
+        if (event.data && (event.data.email || event.data.error)) {
+            const { email, error } = event.data;
+             window.removeEventListener("message", messageListener); // Clean up listener
+            popup.close();
+
+
+            if (error) {
+                 toast({
+                    title: "Login Failed",
+                    description: error,
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (email) {
+                setUserEmail(email);
+                setIsLoggedIn(true);
+                const role = determineUserRole(email);
+                setUserRole(role);
+                setCurrentView("chat");
+                toast({
+                    title: "Login Successful",
+                    description: `Logged in as ${email} (${role})`,
+                });
+            }
         }
+      };
+      window.addEventListener("message", messageListener);
 
-        setUserEmail(email);
-        setIsLoggedIn(true);
-        const role = determineUserRole(email);
-        setUserRole(role);
-        setCurrentView("chat");
+      // Fallback if popup closes without message (e.g., user closes it manually)
+      const popupCloseCheckInterval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(popupCloseCheckInterval);
+          window.removeEventListener("message", messageListener);
+          // Check if already logged in by the message event to avoid double toast
+          if (!isLoggedIn) { 
+            toast({
+              title: "Login Canceled",
+              description: "Microsoft login window was closed.",
+              variant: "default" 
+            });
+          }
+        }
+      }, 500);
 
-        toast({
-          title: "Login Successful",
-          description: `Logged in as ${email} (${role})`,
-        });
-
-        popup.close();
-      });
 
     } catch (error) {
       console.error("Microsoft Login Error:", error);
-      popup.close();
+      if(popup && !popup.closed) popup.close();
       toast({
         title: "Login Failed",
         description: error instanceof Error ? error.message : String(error),
@@ -256,69 +382,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const MicrosoftIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M11.57 3H2.01001C1.27501 3 0.700012 3.79 0.700012 4.53V12H11.57V3Z" fill="#f25022" />
-      <path d="M23.3 3H12.43V12H23.3C23.7 12 24 11.71 24 11.27V4.53C24 3.79 23.72 3 23.3 3Z" fill="#7fba00" />
-      <path d="M11.57 21V12.8H0.700012V19.47C0.700012 20.21 1.28001 21 2.01001 21H11.57Z" fill="#00a4ef" />
-      <path d="M23.3 21H12.43V12.8H24V19.47C24 20.21 23.7 21 23.3 21Z" fill="#ffb900" />
-    </svg>
-  );
-
-  const ChatInterface = () => (
-    <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
-      <div className="flex items-center p-4 border-b">
-        <h1 className="text-xl font-bold text-center flex-grow">Chat Utec</h1>
-      </div>
-
-      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
-        <div className="space-y-4">
-          {!isLoggedIn && (
-            <div className="text-center text-muted-foreground p-4">
-              Please log in to start chatting.
-            </div>
-          )}
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
-                }`}
-            >
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${message.isUser
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground'
-                  } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`}
-              >
-                {message.text || (message.isTyping ? '...' : '')}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-
-      <div className="flex items-center p-4 border-t">
-        <Input
-          type="text"
-          placeholder={isLoggedIn ? "Type your message..." : "Log in to chat"}
-          className="flex-grow mr-2"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isTyping || !isLoggedIn}
-        />
-        <Button onClick={handleSendMessage} aria-label="Send message" disabled={isTyping || !isLoggedIn}>
-          <Send className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -333,12 +396,11 @@ const AppContent: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
-              {/* Mobile sidebar content is duplicated here for SheetContent */}
               <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                   <div className="flex flex-col items-center gap-2 w-full">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
+                      <AvatarImage data-ai-hint="user profile" src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
                       <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium text-center break-all px-2">{userEmail}</span>
@@ -396,18 +458,18 @@ const AppContent: React.FC = () => {
             </SheetContent>
           </Sheet>
         ) : (
-          <SidebarTrigger />
+           <SidebarTrigger />
         )}
       </div>
 
       <div className="flex h-screen w-screen bg-background">
-        <Sidebar collapsible="offcanvas">
+        <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : "icon"}>
           <SidebarContent>
             <SidebarHeader className="items-center">
               {isLoggedIn && userEmail && (
                 <div className="flex flex-col items-center gap-2 w-full">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
+                    <AvatarImage data-ai-hint="user profile" src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${userEmail}`} alt={userEmail} />
                     <AvatarFallback>{userEmail.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-center break-all px-2">{userEmail}</span>
@@ -466,8 +528,20 @@ const AppContent: React.FC = () => {
         </Sidebar>
 
         <SidebarInset>
-          <div className="flex flex-col flex-grow items-center justify-center p-4 pt-16 h-full">
-            {currentView === 'chat' && <ChatInterface />}
+          <div className="flex flex-col flex-grow items-center justify-center p-4 pt-16 md:pt-4 h-full">
+            {currentView === 'chat' && (
+              <ChatInterfaceComponent
+                messages={messages}
+                input={input}
+                isTyping={isTyping}
+                isLoggedIn={isLoggedIn}
+                onInputChange={handleInputChange}
+                onSendMessage={handleSendMessage}
+                onInputKeyDown={handleInputKeyDown}
+                scrollAreaRef={scrollAreaRef}
+                messagesEndRef={messagesEndRef}
+              />
+            )}
             {currentView === 'documents' && userRole === 'admin' && <ManageDocuments />}
             {currentView === 'documents' && userRole !== 'admin' && (
               <div className="text-center text-destructive p-4">
@@ -483,7 +557,7 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={false} collapsible="offcanvas">
+    <SidebarProvider defaultOpen={true} collapsible="icon">
       <AppContent />
     </SidebarProvider>
   );
