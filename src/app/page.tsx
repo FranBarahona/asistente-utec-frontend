@@ -31,19 +31,19 @@ interface Message {
   isTyping?: boolean;
 }
 
-type UserRole = 'admin' | 'student' | 'guest';
+type UserRole = 'administrador' | 'estudiante' | 'invitado';
 type CurrentView = 'chat' | 'documents';
 
 // Helper function to determine user role based on email
 const determineUserRole = (email: string | null): UserRole => {
-  if (!email) return 'guest';
+  if (!email) return 'invitado';
   if (/^[a-zA-Z]+\.[a-zA-Z]+@mail\.utec\.edu\.sv$/.test(email)) {
-    return 'admin';
+    return 'administrador';
   }
-  if (/^\d{8}@mail\.utec\.edu\.sv$/.test(email)) {
-    return 'student';
+  if (/^\d{8}@mail\.utec\.edu\.sv$/.test(email)) { 
+    return 'estudiante';
   }
-  return 'guest';
+  return 'invitado';
 };
 
 const MicrosoftIcon: React.FC = () => (
@@ -303,17 +303,11 @@ const AppContent: React.FC = () => {
       popup.location.href = data.redirectUrl;
 
       const messageListener = (event: MessageEvent) => {
-        // Ensure the message is from the expected origin (your backend that serves the success page)
-        // This origin might need to be the same as your backendUrl or a specific success redirect URL origin
-        // For now, let's assume it's the backendUrl or be more flexible if needed.
-        // IMPORTANT: Ensure event.origin is validated properly in a production environment.
-        // if (event.origin !== backendUrl) return; // Example validation, adjust if necessary
 
         if (event.data && (event.data.email || event.data.error)) {
             const { email, error } = event.data;
              window.removeEventListener("message", messageListener); // Clean up listener
             popup.close();
-
 
             if (error) {
                  toast({
@@ -370,7 +364,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setUserEmail(null);
     setIsLoggedIn(false);
-    setUserRole('guest');
+    setUserRole('invitado');
     setMessages([]);
     setCurrentView('chat');
     toast({
