@@ -49,14 +49,13 @@ const ManageDocuments: React.FC = () => {
     try {
       const response = await fetch(`${apiUrlBase}/document/all`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Failed to fetch documents. Status: ${response.status}` }));
+        const errorData = await response.json().catch(() => ({ message: `Fallo al obtener documentos. Status: ${response.status}` }));
         throw new Error(errorData.message || `Failed to fetch documents. Status: ${response.status}`);
       }
       const result = await response.json();
       if (result.data && Array.isArray(result.data)) {
         setDocuments(result.data);
       } else {
-        // Assuming if result itself is an array, it's the document list (as per previous integrations)
         if(Array.isArray(result)){
             setDocuments(result);
         } else {
@@ -118,14 +117,14 @@ const ManageDocuments: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Upload failed. Status: ${response.status}` }));
+        const errorData = await response.json().catch(() => ({ message: `subida fallida. Status: ${response.status}` }));
         throw new Error(errorData.message || `Upload failed. Status: ${response.status}`);
       }
 
       const result = await response.json();
       toast({
         title: "Upload Successful",
-        description: `${fileToUpload.name} has been uploaded. ${result.message || ''}`,
+        description: `${fileToUpload.name} ha sido subido`,
       });
       setFileToUpload(null); // Reset file input
       const fileInputElement = document.getElementById('file-upload-input') as HTMLInputElement;
@@ -157,24 +156,24 @@ const ManageDocuments: React.FC = () => {
     }
     setIsDeleting(docId);
     try {
-      const response = await fetch(`${apiUrlBase}/document/delete/${docId}`, {
+      const response = await fetch(`${apiUrlBase}/document/${docId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Deletion failed. Status: ${response.status}` }));
+        const errorData = await response.json().catch(() => ({ message: `Eliminacion fallida. Status: ${response.status}` }));
         throw new Error(errorData.message || `Deletion failed for ${docName}. Status: ${response.status}`);
       }
       const result = await response.json();
       toast({
-        title: "Document Deleted",
-        description: `${docName} has been deleted. ${result.message || ''}`,
+        title: "Documento eliminado",
+        description: `${docName} ha sido eliminado. ${result.message || ''}`,
       });
       setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== docId));
     } catch (error) {
-      console.error(`Error deleting document ${docId}:`, error);
+      console.error(`Error eliminando documento ${docId}:`, error);
       toast({
-        title: "Deletion Failed",
+        title: "Eliminacion fallida",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -198,7 +197,7 @@ const ManageDocuments: React.FC = () => {
   return (
     <Card className="w-full max-w-4xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Manage Documents</CardTitle>
+        <CardTitle>Gestionar documentos</CardTitle>
         <div className="flex items-center gap-2">
           <input 
             id="file-upload-input"
@@ -209,13 +208,13 @@ const ManageDocuments: React.FC = () => {
           />
           <Button onClick={handleUpload} size="sm" disabled={isUploading || !fileToUpload}>
             {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            {isUploading ? 'Uploading...' : 'Upload'}
+            {isUploading ? 'Subiendo...' : 'Subido'}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground mb-4">
-          Admins can upload, view, and delete documents that the chatbot uses for context.
+        Los administradores pueden cargar, ver y eliminar documentos que el chatbot utiliza para el contexto.
         </p>
         {isLoading ? (
           <div className="flex justify-center items-center py-10">
@@ -241,7 +240,7 @@ const ManageDocuments: React.FC = () => {
                         size="icon"
                         className="text-primary hover:bg-primary/10"
                         onClick={() => handleViewDocument(doc.path)}
-                        aria-label={`View ${doc.filename}`}
+                        aria-label={`Ver ${doc.filename}`}
                       >
                         <Eye className="h-4 w-4" />
                     </Button>
@@ -252,16 +251,16 @@ const ManageDocuments: React.FC = () => {
                           size="icon"
                           className="text-destructive hover:bg-destructive/10"
                           disabled={isDeleting === doc.id}
-                          aria-label={`Delete ${doc.filename}`}
+                          aria-label={`Borrar ${doc.filename}`}
                         >
                           {isDeleting === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogTitle>Estas seguro?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the document
+                          Esta acción no se puede deshacer. Esto eliminará permanentemente el documento
                             "{doc.filename}".
                           </AlertDialogDescription>
                         </AlertDialogHeader>
