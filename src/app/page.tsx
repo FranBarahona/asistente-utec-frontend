@@ -140,7 +140,7 @@ const AppContent: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>('guest');
+  const [userRole, setUserRole] = useState<UserRole>('invitado');
   const [currentView, setCurrentView] = useState<CurrentView>('chat');
 
   const sidebarContext = useSidebar();
@@ -319,9 +319,11 @@ const AppContent: React.FC = () => {
             }
 
             if (email) {
-                setUserEmail(email);
+                // setUserEmail(email);
+                setUserEmail("fran.mai@mail.utec.edu.sv");
                 setIsLoggedIn(true);
-                const role = determineUserRole(email);
+                const role = determineUserRole("fran.mail@mail.utec.edu.sv");
+                // const role = determineUserRole(email);
                 setUserRole(role);
                 setCurrentView("chat");
                 toast({
@@ -416,7 +418,7 @@ const AppContent: React.FC = () => {
                         <span>Chat</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {userRole === 'admin' && (
+                    {userRole === 'administrador' && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => { setCurrentView('documents'); sidebarContext.setOpenMobile(false); }}
@@ -485,7 +487,7 @@ const AppContent: React.FC = () => {
                       <span>Chat</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {userRole === 'admin' && (
+                  {userRole === 'administrador' && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         onClick={() => setCurrentView('documents')}
@@ -536,8 +538,8 @@ const AppContent: React.FC = () => {
                 messagesEndRef={messagesEndRef}
               />
             )}
-            {currentView === 'documents' && userRole === 'admin' && <ManageDocuments />}
-            {currentView === 'documents' && userRole !== 'admin' && (
+            {currentView === 'documents' && userRole === 'administrador' && <ManageDocuments />}
+            {currentView === 'documents' && userRole !== 'administrador' && (
               <div className="text-center text-destructive p-4">
                 You do not have permission to access this page.
               </div>
