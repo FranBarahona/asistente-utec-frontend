@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FilePlus, Trash2, Loader2 } from 'lucide-react';
+import { Upload, FilePlus, Trash2, Loader2, Eye } from 'lucide-react'; // Added Eye icon
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -56,7 +56,12 @@ const ManageDocuments: React.FC = () => {
       if (result.data && Array.isArray(result.data)) {
         setDocuments(result.data);
       } else {
-        throw new Error("Invalid data format received from API.");
+        // Assuming if result itself is an array, it's the document list (as per previous integrations)
+        if(Array.isArray(result)){
+            setDocuments(result);
+        } else {
+            throw new Error("Invalid data format received from API.");
+        }
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
@@ -123,7 +128,6 @@ const ManageDocuments: React.FC = () => {
         description: `${fileToUpload.name} has been uploaded. ${result.message || ''}`,
       });
       setFileToUpload(null); // Reset file input
-      // Clear the actual file input element if possible (might need a ref)
       const fileInputElement = document.getElementById('file-upload-input') as HTMLInputElement;
       if (fileInputElement) {
         fileInputElement.value = '';
@@ -179,6 +183,10 @@ const ManageDocuments: React.FC = () => {
     }
   };
 
+  const handleViewDocument = (path: string) => {
+    window.open(path, '_blank', 'noopener,noreferrer');
+  };
+
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString('en-CA'); // YYYY-MM-DD format
@@ -227,39 +235,50 @@ const ManageDocuments: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
+                  <div className="flex items-center gap-1">
+                    <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive hover:bg-destructive/10"
-                        disabled={isDeleting === doc.id}
-                        aria-label={`Delete ${doc.filename}`}
+                        className="text-primary hover:bg-primary/10"
+                        onClick={() => handleViewDocument(doc.path)}
+                        aria-label={`View ${doc.filename}`}
                       >
-                        {isDeleting === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the document
-                          "{doc.filename}".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting === doc.id}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(doc.id, doc.filename)}
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10"
                           disabled={isDeleting === doc.id}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          aria-label={`Delete ${doc.filename}`}
                         >
-                          {isDeleting === doc.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          {isDeleting === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the document
+                            "{doc.filename}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={isDeleting === doc.id}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(doc.id, doc.filename)}
+                            disabled={isDeleting === doc.id}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isDeleting === doc.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               ))
             ) : (
