@@ -310,10 +310,12 @@ const AppContent: React.FC = () => {
       title: "Iniciando sesión",
       description: "Espera mientras se inicia sesión con Microsoft...",
     });
+    
+    let messageProcessed = false; // Flag to track if the message listener processed an event
 
     try {
       const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
-      const response = await fetch(apiLoginUrl, { method: 'GET' }); // Use GET as per backend
+      const response = await fetch(apiLoginUrl, { method: 'GET' }); 
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
@@ -326,16 +328,13 @@ const AppContent: React.FC = () => {
         throw new Error("Login failed. No redirect URL received from backend.");
       }
 
-      // Navigate the popup to Microsoft's login page
       popup.location.href = data.redirectUrl;
 
-      // Listen for messages from the popup (which should come from the /callback page)
       const messageListener = (event: MessageEvent) => {
-        // Ensure the event is from our popup's origin if possible (more secure)
-        // For now, check data structure
         if (event.data && (event.data.email || event.data.error)) {
+            messageProcessed = true; // Mark that a message was processed
             const { email, error, name } = event.data;
-            window.removeEventListener("message", messageListener); // Clean up listener
+            window.removeEventListener("message", messageListener); 
             if(popup && !popup.closed) popup.close();
 
             if (error) {
@@ -348,7 +347,7 @@ const AppContent: React.FC = () => {
             }
 
             if (email) {
-                setUserEmail(email); // Set user email
+                setUserEmail(email); 
                 setIsLoggedIn(true);
                 const role = determineUserRole(email);
                 setUserRole(role);
@@ -362,13 +361,11 @@ const AppContent: React.FC = () => {
       };
       window.addEventListener("message", messageListener);
 
-      // Fallback if popup closes without message (e.g., user closes it manually)
       const popupCloseCheckInterval = setInterval(() => {
         if (popup.closed) {
           clearInterval(popupCloseCheckInterval);
-          window.removeEventListener("message", messageListener);
-          // Check if already logged in by the message event to avoid double toast
-          if (!isLoggedIn) { 
+          window.removeEventListener("message", messageListener); // Clean up listener
+          if (!messageProcessed) { // Only show cancel toast if no message was processed from popup
             toast({
               title: "Inicio de sesión cancelado",
               description: "Microsoft inicio de sesion ventana fue cerrada.",
