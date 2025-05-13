@@ -123,7 +123,7 @@ const ManageDocuments: React.FC = () => {
 
       const result = await response.json();
       toast({
-        title: "Upload Successful",
+        title: "Carga exitosa",
         description: `${fileToUpload.name} ha sido subido`,
       });
       setFileToUpload(null); // Reset file input
@@ -208,7 +208,7 @@ const ManageDocuments: React.FC = () => {
           />
           <Button onClick={handleUpload} size="sm" disabled={isUploading || !fileToUpload}>
             {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            {isUploading ? 'Subiendo...' : 'Subido'}
+            {isUploading ? 'Subiendo...' : 'Subir'}
           </Button>
         </div>
       </CardHeader>
@@ -281,7 +281,7 @@ const ManageDocuments: React.FC = () => {
                 </div>
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-4">No documents uploaded yet.</p>
+              <p className="text-center text-muted-foreground py-4">No hay documentos subidos aun.</p>
             )}
           </div>
         )}

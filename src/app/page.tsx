@@ -88,7 +88,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
         <div className="space-y-4">
           {!isLoggedIn && (
             <div className="text-center text-muted-foreground p-4">
-              Please log in to start chatting.
+              Inicia sesión para empezar a chatear.
             </div>
           )}
           {messages.map((message, index) => (
@@ -328,7 +328,7 @@ const AppContent: React.FC = () => {
                 setCurrentView("chat");
                 toast({
                     title: "Inicio de sesion exitoso",
-                    description: `Ha iniciado sesion como ${email} (${role})`,
+                    description: `Ha iniciado sesión como ${email} (${role})`,
                 });
             }
         }
@@ -356,7 +356,7 @@ const AppContent: React.FC = () => {
       console.error("Microsoft Login Error:", error);
       if(popup && !popup.closed) popup.close();
       toast({
-        title: "Login Failed",
+        title: "Inicia sesión fallido",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -370,8 +370,8 @@ const AppContent: React.FC = () => {
     setMessages([]);
     setCurrentView('chat');
     toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
+      title: "Cierre de sesión",
+      description: "Has cerrado sesión exitosamente.",
     });
     if (sidebarContext?.isMobile && sidebarContext?.openMobile) {
       sidebarContext?.setOpenMobile(false);
@@ -423,7 +423,7 @@ const AppContent: React.FC = () => {
                         <SidebarMenuButton
                           onClick={() => { setCurrentView('documents'); sidebarContext.setOpenMobile(false); }}
                           isActive={currentView === 'documents'}
-                          tooltip={{ children: "Gestion de documentos" }}
+                          tooltip={{ children: "Gestión de documentos" }}
                         >
                           <FileText />
                           <span>Gestion de documentos</span>
@@ -440,14 +440,14 @@ const AppContent: React.FC = () => {
                     <SidebarMenuItem>
                       <SidebarMenuButton onClick={handleLogout} tooltip={{ children: "Logout" }}>
                         <LogOut />
-                        <span>Logout</span>
+                        <span>Cerrar sesion</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
                 ) : (
-                  <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft" className="w-full">
+                  <Button onClick={handleMicrosoftLogin} aria-label="Inicia sesión con microsoft" className="w-full">
                     <MicrosoftIcon />
-                    <span className="ml-2">Login with Microsoft</span>
+                    <span className="ml-2">Inicia sesión con microsoft</span>
                   </Button>
                 )}
               </SidebarFooter>
@@ -495,7 +495,7 @@ const AppContent: React.FC = () => {
                         tooltip={{ children: "Manage Documents" }}
                       >
                         <FileText />
-                        <span>Manage Documents</span>
+                        <span>Documentos</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -514,9 +514,9 @@ const AppContent: React.FC = () => {
                   </SidebarMenuItem>
                 </SidebarMenu>
               ) : (
-                <Button onClick={handleMicrosoftLogin} aria-label="Login with Microsoft" className="w-full">
+                <Button onClick={handleMicrosoftLogin} aria-label="Inicia sesión con microsoft" className="w-full">
                   <MicrosoftIcon />
-                  <span className="ml-2">Login with Microsoft</span>
+                  <span className="ml-2">Inicia sesión con microsoft</span>
                 </Button>
               )}
             </SidebarFooter>
@@ -541,7 +541,7 @@ const AppContent: React.FC = () => {
             {currentView === 'documents' && userRole === 'administrador' && <ManageDocuments />}
             {currentView === 'documents' && userRole !== 'administrador' && (
               <div className="text-center text-destructive p-4">
-                You do not have permission to access this page.
+             No tiene permiso para acceder a esta página.
               </div>
             )}
           </div>
