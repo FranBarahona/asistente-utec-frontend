@@ -114,14 +114,14 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
       <div className="flex items-center p-4 border-t">
         <Input
           type="text"
-          placeholder={isLoggedIn ? "Type your message..." : "Log in to chat"}
+          placeholder={isLoggedIn ? "Escribe tu mensaje..." : "Conectarse al chat"}
           className="flex-grow mr-2"
           value={input}
           onChange={onInputChange}
           onKeyDown={onInputKeyDown}
           disabled={isTyping || !isLoggedIn}
         />
-        <Button onClick={onSendMessage} aria-label="Send message" disabled={isTyping || !isLoggedIn}>
+        <Button onClick={onSendMessage} aria-label="Enviar mensaje" disabled={isTyping || !isLoggedIn}>
           <Send className="w-4 h-4" />
         </Button>
       </div>
