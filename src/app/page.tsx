@@ -146,7 +146,24 @@ const AppContent: React.FC = () => {
   const sidebarContext = useSidebar();
 
   useEffect(() => {
+    // Attempt to retrieve login state from localStorage
+    const storedEmail = localStorage.getItem('userEmail');
+    if (storedEmail) {
+      setUserEmail(storedEmail);
+      setIsLoggedIn(true);
+      setUserRole(determineUserRole(storedEmail));
+    }
+  }, []);
+
+
+  useEffect(() => {
     setUserRole(determineUserRole(userEmail));
+    // Store email in localStorage on login, remove on logout
+    if (userEmail) {
+      localStorage.setItem('userEmail', userEmail);
+    } else {
+      localStorage.removeItem('userEmail');
+    }
   }, [userEmail]);
 
   const scrollToBottom = () => {
@@ -161,15 +178,18 @@ const AppContent: React.FC = () => {
     let i = 0;
     let currentTypedText = '';
     setIsTyping(true);
+    
+    // Add a new message object for the AI's response, initially empty and marked as typing
     setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
-
+  
     const intervalId = setInterval(() => {
       if (i < text.length) {
         currentTypedText += text[i];
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
-          if (typingMessageIndex !== -1) {
+          // Find the last message that is from AI and currently typing
+          const typingMessageIndex = newMessages.length - 1; // Assuming the last message is the one we're updating
+          if (typingMessageIndex !== -1 && newMessages[typingMessageIndex].isTyping && !newMessages[typingMessageIndex].isUser) {
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' };
           }
           return newMessages;
@@ -180,8 +200,8 @@ const AppContent: React.FC = () => {
         setIsTyping(false);
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findLastIndex(m => m.isTyping && !m.isUser);
-          if (typingMessageIndex !== -1) {
+          const typingMessageIndex = newMessages.length - 1; // Assuming the last message
+           if (typingMessageIndex !== -1 && !newMessages[typingMessageIndex].isUser) { // Ensure it's an AI message
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
           }
           return newMessages;
@@ -208,7 +228,7 @@ const AppContent: React.FC = () => {
             variant: "destructive",
           });
           setMessages(prev => [...prev, { text: 'Sorry, API is not configured.', isUser: false }]);
-          setIsTyping(false); // Ensure typing indicator is turned off
+          setIsTyping(false); 
           return;
         }
         const apiUrl = `${apiUrlBase}/document/ask?query=${encodeURIComponent(userMessageText)}`;
@@ -269,7 +289,7 @@ const AppContent: React.FC = () => {
     const top = window.screenY + (window.innerHeight - height) / 2;
 
     const popup = window.open(
-      "",
+      "", // Leave URL blank initially
       "MicrosoftLoginPopup",
       `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
     );
@@ -282,6 +302,9 @@ const AppContent: React.FC = () => {
       });
       return;
     }
+    // Display loading message in popup
+    popup.document.write('<!DOCTYPE html><html><head><title>Logging in...</title><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; } .loader { border: 8px solid #e0e0e0; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></head><body><div style="text-align:center;"><div class="loader"></div><p style="margin-top:20px; font-size:16px; color: #333;">Iniciando sesión con Microsoft... Por favor espera.</p></div></body></html>');
+
 
     toast({
       title: "Iniciando sesión",
@@ -289,25 +312,31 @@ const AppContent: React.FC = () => {
     });
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        throw new Error("Backend URL is not configured.");
+      const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
+      const response = await fetch(apiLoginUrl, { method: 'GET' }); // Use GET as per backend
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
+        throw new Error(errorData.error || `Login initiation failed. Status: ${response.status}`);
       }
-      const response = await fetch(`${backendUrl}/microsoft/login`, { method: 'GET' });
+
       const data = await response.json();
 
-      if (!response.ok || !data.redirectUrl) {
-        throw new Error(data.error || "Login failed. No redirect URL received.");
+      if (!data.redirectUrl) {
+        throw new Error("Login failed. No redirect URL received from backend.");
       }
 
+      // Navigate the popup to Microsoft's login page
       popup.location.href = data.redirectUrl;
 
+      // Listen for messages from the popup (which should come from the /callback page)
       const messageListener = (event: MessageEvent) => {
-
+        // Ensure the event is from our popup's origin if possible (more secure)
+        // For now, check data structure
         if (event.data && (event.data.email || event.data.error)) {
-            const { email, error } = event.data;
-             window.removeEventListener("message", messageListener); // Clean up listener
-            popup.close();
+            const { email, error, name } = event.data;
+            window.removeEventListener("message", messageListener); // Clean up listener
+            if(popup && !popup.closed) popup.close();
 
             if (error) {
                  toast({
@@ -319,17 +348,14 @@ const AppContent: React.FC = () => {
             }
 
             if (email) {
-                // setUserEmail(email);
-                // setUserEmail("fran.mai@mail.utec.edu.sv");
+                setUserEmail(email); // Set user email
                 setIsLoggedIn(true);
-                // const role = determineUserRole("fran.mail@mail.utec.edu.sv");
                 const role = determineUserRole(email);
-                console.log("🚀 ~ messageListener ~ role:", role)
                 setUserRole(role);
                 setCurrentView("chat");
                 toast({
                     title: "Inicio de sesión exitoso",
-                    description: `Ha iniciado sesión como ${email} (${role})`,
+                    description: `Ha iniciado sesión como ${name || email} (${role})`,
                 });
             }
         }
@@ -460,7 +486,7 @@ const AppContent: React.FC = () => {
       </div>
 
       <div className="flex h-screen w-screen bg-background">
-        <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : "icon"}>
+        <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : sidebarContext?.collapsible}>
           <SidebarContent>
             <SidebarHeader className="items-center">
               {isLoggedIn && userEmail && (
@@ -554,7 +580,7 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="icon">
+    <SidebarProvider defaultOpen={true} collapsible="offcanvas">
       <AppContent />
     </SidebarProvider>
   );
