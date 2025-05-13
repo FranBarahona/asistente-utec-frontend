@@ -311,7 +311,7 @@ const AppContent: React.FC = () => {
 
             if (error) {
                  toast({
-                    title: "Login Failed",
+                    title: "Inicio de sesion fallido",
                     description: error,
                     variant: "destructive",
                 });
@@ -327,8 +327,8 @@ const AppContent: React.FC = () => {
                 setUserRole(role);
                 setCurrentView("chat");
                 toast({
-                    title: "Login Successful",
-                    description: `Logged in as ${email} (${role})`,
+                    title: "Inicio de sesion exitoso",
+                    description: `Ha iniciado sesion como ${email} (${role})`,
                 });
             }
         }
@@ -343,8 +343,8 @@ const AppContent: React.FC = () => {
           // Check if already logged in by the message event to avoid double toast
           if (!isLoggedIn) { 
             toast({
-              title: "Login Canceled",
-              description: "Microsoft login window was closed.",
+              title: "Inicio de sesión cancelado",
+              description: "Microsoft inciio de session ventana fue cerrada.",
               variant: "default" 
             });
           }
@@ -423,10 +423,10 @@ const AppContent: React.FC = () => {
                         <SidebarMenuButton
                           onClick={() => { setCurrentView('documents'); sidebarContext.setOpenMobile(false); }}
                           isActive={currentView === 'documents'}
-                          tooltip={{ children: "Manage Documents" }}
+                          tooltip={{ children: "Gestion de documentos" }}
                         >
                           <FileText />
-                          <span>Manage Documents</span>
+                          <span>Gestion de documentos</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
