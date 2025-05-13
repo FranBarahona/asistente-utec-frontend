@@ -142,6 +142,7 @@ const AppContent: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('invitado');
   const [currentView, setCurrentView] = useState<CurrentView>('chat');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const sidebarContext = useSidebar();
 
@@ -152,11 +153,20 @@ const AppContent: React.FC = () => {
       setUserEmail(storedEmail);
       setIsLoggedIn(true);
       setUserRole(determineUserRole(storedEmail));
+    } else {
+      // Ensure clean state if nothing in storage
+      setUserEmail(null);
+      setIsLoggedIn(false);
+      setUserRole('invitado');
     }
-  }, []);
+    setIsInitialized(true); // Mark as initialized after loading from localStorage
+  }, []); // Empty dependency array: runs once on mount
 
 
   useEffect(() => {
+    if (!isInitialized) {
+        return; // Don't run this effect until localStorage has been checked
+    }
     setUserRole(determineUserRole(userEmail));
     // Store email in localStorage on login, remove on logout
     if (userEmail) {
@@ -164,7 +174,7 @@ const AppContent: React.FC = () => {
     } else {
       localStorage.removeItem('userEmail');
     }
-  }, [userEmail]);
+  }, [userEmail, isInitialized]); // Depend on userEmail and isInitialized
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -179,7 +189,6 @@ const AppContent: React.FC = () => {
     let currentTypedText = '';
     setIsTyping(true);
     
-    // Add a new message object for the AI's response, initially empty and marked as typing
     setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
   
     const intervalId = setInterval(() => {
@@ -187,8 +196,7 @@ const AppContent: React.FC = () => {
         currentTypedText += text[i];
         setMessages(prev => {
           const newMessages = [...prev];
-          // Find the last message that is from AI and currently typing
-          const typingMessageIndex = newMessages.length - 1; // Assuming the last message is the one we're updating
+          const typingMessageIndex = newMessages.length - 1; 
           if (typingMessageIndex !== -1 && newMessages[typingMessageIndex].isTyping && !newMessages[typingMessageIndex].isUser) {
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' };
           }
@@ -200,8 +208,8 @@ const AppContent: React.FC = () => {
         setIsTyping(false);
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.length - 1; // Assuming the last message
-           if (typingMessageIndex !== -1 && !newMessages[typingMessageIndex].isUser) { // Ensure it's an AI message
+          const typingMessageIndex = newMessages.length - 1; 
+           if (typingMessageIndex !== -1 && !newMessages[typingMessageIndex].isUser) { 
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
           }
           return newMessages;
@@ -289,7 +297,7 @@ const AppContent: React.FC = () => {
     const top = window.screenY + (window.innerHeight - height) / 2;
 
     const popup = window.open(
-      "", // Leave URL blank initially
+      "", 
       "MicrosoftLoginPopup",
       `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
     );
@@ -302,20 +310,26 @@ const AppContent: React.FC = () => {
       });
       return;
     }
-    // Display loading message in popup
     popup.document.write('<!DOCTYPE html><html><head><title>Logging in...</title><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; } .loader { border: 8px solid #e0e0e0; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></head><body><div style="text-align:center;"><div class="loader"></div><p style="margin-top:20px; font-size:16px; color: #333;">Iniciando sesión con Microsoft... Por favor espera.</p></div></body></html>');
-
 
     toast({
       title: "Iniciando sesión",
       description: "Espera mientras se inicia sesión con Microsoft...",
     });
     
-    let messageProcessed = false; // Flag to track if the message listener processed an event
+    let messageProcessed = false; 
 
     try {
-      const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
-      const response = await fetch(apiLoginUrl, { method: 'GET' }); 
+      // Simulate backend call for OAuth URL or direct simulation
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+          toast({ title: "Configuration Error", description: "Backend URL is not configured.", variant: "destructive" });
+          if (popup && !popup.closed) popup.close();
+          return;
+      }
+      // This would be your actual backend endpoint that initiates OAuth with Microsoft
+      // For simulation, we use the one that returns a predefined email
+      const response = await fetch(`/api/auth/microsoft/login`, { method: 'POST' }); 
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
@@ -324,15 +338,33 @@ const AppContent: React.FC = () => {
 
       const data = await response.json();
 
-      if (!data.redirectUrl) {
-        throw new Error("Login failed. No redirect URL received from backend.");
-      }
+      // SIMULATION: In a real OAuth flow, the backend would redirect to Microsoft,
+      // then Microsoft redirects back to a callback URL you've configured.
+      // That callback URL would then post a message to the popup opener window.
+      // For this simulation, we directly use the email from our mock /api/auth/microsoft/login
+      
+      // The popup content itself would ideally handle the Microsoft interaction
+      // and then use window.opener.postMessage to send data back.
+      // For this simplified example, we'll simulate the data coming back almost immediately.
+      // To make the popup seem more realistic, we can add a small delay.
+      setTimeout(() => {
+        if (popup && !popup.closed) {
+          // Simulate the message that would come from the popup after Microsoft login
+          // In a real scenario, this data (email, name, error) comes from your /auth/microsoft/callback endpoint
+          // which then renders a page in the popup that calls window.opener.postMessage
+          window.postMessage({ email: data.email, name: data.email, error: data.error }, window.origin);
+        }
+      }, 1500); // Small delay to simulate IdP interaction
 
-      popup.location.href = data.redirectUrl;
 
       const messageListener = (event: MessageEvent) => {
+        // Ensure the message is from a trusted source (e.g., your own origin if popup is on same domain, or specific check)
+        if (event.origin !== window.origin) { // Basic security check
+          return;
+        }
+
         if (event.data && (event.data.email || event.data.error)) {
-            messageProcessed = true; // Mark that a message was processed
+            messageProcessed = true; 
             const { email, error, name } = event.data;
             window.removeEventListener("message", messageListener); 
             if(popup && !popup.closed) popup.close();
@@ -349,12 +381,11 @@ const AppContent: React.FC = () => {
             if (email) {
                 setUserEmail(email); 
                 setIsLoggedIn(true);
-                const role = determineUserRole(email);
-                setUserRole(role);
+                // User role is already determined by useEffect [userEmail, isInitialized]
                 setCurrentView("chat");
                 toast({
                     title: "Inicio de sesión exitoso",
-                    description: `Ha iniciado sesión como ${name || email} (${role})`,
+                    description: `Ha iniciado sesión como ${name || email} (${determineUserRole(email)})`,
                 });
             }
         }
@@ -362,10 +393,10 @@ const AppContent: React.FC = () => {
       window.addEventListener("message", messageListener);
 
       const popupCloseCheckInterval = setInterval(() => {
-        if (popup.closed) {
+        if (!popup || popup.closed) { // Check if popup exists before accessing .closed
           clearInterval(popupCloseCheckInterval);
-          window.removeEventListener("message", messageListener); // Clean up listener
-          if (!messageProcessed) { // Only show cancel toast if no message was processed from popup
+          window.removeEventListener("message", messageListener); 
+          if (!messageProcessed) { 
             toast({
               title: "Inicio de sesión cancelado",
               description: "Microsoft inicio de sesion ventana fue cerrada.",
@@ -374,7 +405,6 @@ const AppContent: React.FC = () => {
           }
         }
       }, 500);
-
 
     } catch (error) {
       console.error("Microsoft Login Error:", error);
@@ -390,7 +420,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setUserEmail(null);
     setIsLoggedIn(false);
-    setUserRole('invitado');
+    // userRole will be updated by useEffect [userEmail, isInitialized]
     setMessages([]);
     setCurrentView('chat');
     toast({
@@ -416,7 +446,7 @@ const AppContent: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
-              <SidebarHeader className="items-center">
+              <SidebarHeader className="items-center pt-6"> {/* Added pt-6 for spacing */}
                 {isLoggedIn && userEmail && (
                   <div className="flex flex-col items-center gap-2 w-full">
                     <Avatar className="h-12 w-12">
@@ -434,7 +464,7 @@ const AppContent: React.FC = () => {
                   <>
                     <SidebarMenuItem>
                       <SidebarMenuButton
-                        onClick={() => { setCurrentView('chat'); sidebarContext.setOpenMobile(false); }}
+                        onClick={() => { setCurrentView('chat'); if (sidebarContext.openMobile) sidebarContext.setOpenMobile(false); }}
                         isActive={currentView === 'chat'}
                         tooltip={{ children: "Chat" }}
                       >
@@ -445,7 +475,7 @@ const AppContent: React.FC = () => {
                     {userRole === 'administrador' && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
-                          onClick={() => { setCurrentView('documents'); sidebarContext.setOpenMobile(false); }}
+                          onClick={() => { setCurrentView('documents'); if (sidebarContext.openMobile) sidebarContext.setOpenMobile(false); }}
                           isActive={currentView === 'documents'}
                           tooltip={{ children: "Gestión de documentos" }}
                         >
@@ -477,15 +507,15 @@ const AppContent: React.FC = () => {
               </SidebarFooter>
             </SheetContent>
           </Sheet>
-        ) : (
-           <SidebarTrigger />
+        ) : ( // Desktop trigger
+          <SidebarTrigger /> 
         )}
       </div>
 
       <div className="flex h-screen w-screen bg-background">
         <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : sidebarContext?.collapsible}>
           <SidebarContent>
-            <SidebarHeader className="items-center">
+            <SidebarHeader className="items-center pt-6"> {/* Added pt-6 for spacing */}
               {isLoggedIn && userEmail && (
                 <div className="flex flex-col items-center gap-2 w-full">
                   <Avatar className="h-12 w-12">
@@ -577,9 +607,11 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="offcanvas">
+    // Defaulting collapsible to "icon" for desktop, "offcanvas" is handled internally for mobile
+    <SidebarProvider defaultOpen={true} collapsible="icon"> 
       <AppContent />
     </SidebarProvider>
   );
 }
 
+    
