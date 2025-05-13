@@ -40,7 +40,7 @@ const determineUserRole = (email: string | null): UserRole => {
   if (/^[a-zA-Z]+\.[a-zA-Z]+@mail\.utec\.edu\.sv$/.test(email)) {
     return 'administrador';
   }
-  if (/^\d{8}@mail\.utec\.edu\.sv$/.test(email)) { 
+  if (/^\d{10}@mail\.utec\.edu\.sv$/.test(email)) { 
     return 'estudiante';
   }
   return 'invitado';
