@@ -244,8 +244,8 @@ const AppContent: React.FC = () => {
       }
     } else if (!isLoggedIn) {
       toast({
-        title: "Login Required",
-        description: "Please log in to start chatting.",
+        title: "Inicio de sesión requerido",
+        description: "Por favor, inicia sesión para enviar mensajes.",
         variant: "default",
       });
     }
@@ -276,16 +276,16 @@ const AppContent: React.FC = () => {
 
     if (!popup) {
       toast({
-        title: "Popup blocked",
-        description: "Please allow popups for this site.",
+        title: "Popup bloqueado",
+        description: "Por favor, permite las ventanas emergentes para iniciar sesión.",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Microsoft Login",
-      description: "Waiting for Microsoft OAuth...",
+      title: "Iniciando sesión",
+      description: "Espera mientras se inicia sesión con Microsoft...",
     });
 
     try {
@@ -311,7 +311,7 @@ const AppContent: React.FC = () => {
 
             if (error) {
                  toast({
-                    title: "Inicio de sesion fallido",
+                    title: "Inicio de sesión fallido",
                     description: error,
                     variant: "destructive",
                 });
@@ -320,14 +320,15 @@ const AppContent: React.FC = () => {
 
             if (email) {
                 // setUserEmail(email);
-                setUserEmail("fran.mai@mail.utec.edu.sv");
+                // setUserEmail("fran.mai@mail.utec.edu.sv");
                 setIsLoggedIn(true);
-                const role = determineUserRole("fran.mail@mail.utec.edu.sv");
-                // const role = determineUserRole(email);
+                // const role = determineUserRole("fran.mail@mail.utec.edu.sv");
+                const role = determineUserRole(email);
+                console.log("🚀 ~ messageListener ~ role:", role)
                 setUserRole(role);
                 setCurrentView("chat");
                 toast({
-                    title: "Inicio de sesion exitoso",
+                    title: "Inicio de sesión exitoso",
                     description: `Ha iniciado sesión como ${email} (${role})`,
                 });
             }
@@ -344,7 +345,7 @@ const AppContent: React.FC = () => {
           if (!isLoggedIn) { 
             toast({
               title: "Inicio de sesión cancelado",
-              description: "Microsoft inciio de session ventana fue cerrada.",
+              description: "Microsoft inicio de sesion ventana fue cerrada.",
               variant: "default" 
             });
           }
@@ -440,7 +441,7 @@ const AppContent: React.FC = () => {
                     <SidebarMenuItem>
                       <SidebarMenuButton onClick={handleLogout} tooltip={{ children: "Logout" }}>
                         <LogOut />
-                        <span>Cerrar sesion</span>
+                        <span>Cerrar sesión</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
@@ -509,7 +510,7 @@ const AppContent: React.FC = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton onClick={handleLogout} tooltip={{ children: "Logout" }}>
                       <LogOut />
-                      <span>Logout</span>
+                      <span>Cerrar sesión</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
