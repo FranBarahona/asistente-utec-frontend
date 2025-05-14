@@ -23,7 +23,7 @@ export default {
           foreground: 'hsl(0 0% 3.9%)' // (--popover-foreground: 0 0% 3.9%;)
         },
         primary: {
-          DEFAULT: 'hsl(0 0% 9%)', // (--primary: 0 0% 9%;)
+          DEFAULT: 'hsl(337, 79%, 20%)', // (--primary: 0 0% 9%;)
           foreground: 'hsl(0 0% 98%)' // (--primary-foreground: 0 0% 98%;)
         },
         secondary: {
@@ -35,7 +35,7 @@ export default {
           foreground: 'hsl(0 0% 45.1%)' // (--muted-foreground: 0 0% 45.1%;)
         },
         accent: {
-          DEFAULT: 'hsl(180 100% 25.1%)', // Teal (--accent: 180 100% 25.1%;)
+          DEFAULT: 'hsl(337, 79%, 20%)', // Teal (--accent: 180 100% 25.1%;)
           foreground: 'hsl(0 0% 98%)' // (--accent-foreground: 0 0% 98%;)
         },
         destructive: {
@@ -55,7 +55,7 @@ export default {
         sidebar: {
           DEFAULT: 'hsl(0 0% 98%)', // (--sidebar-background: 0 0% 98%;)
           foreground: 'hsl(240 5.3% 26.1%)', // (--sidebar-foreground: 240 5.3% 26.1%;)
-          primary: 'hsl(240 5.9% 10%)', // (--sidebar-primary: 240 5.9% 10%;)
+          primary: 'hsl(337, 79%, 20%)', // (--sidebar-primary: 240 5.9% 10%;)
           'primary-foreground': 'hsl(0 0% 98%)', // (--sidebar-primary-foreground: 0 0% 98%;)
           accent: 'hsl(240 4.8% 95.9%)', // (--sidebar-accent: 240 4.8% 95.9%;)
           'accent-foreground': 'hsl(240 5.9% 10%)', // (--sidebar-accent-foreground: 240 5.9% 10%;)

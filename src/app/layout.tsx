@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Utec chat',
-  description: 'applicacuin de chat utec',
+  description: 'applicacion de chat utec',
 };
 
 export default function RootLayout({

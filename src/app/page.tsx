@@ -81,7 +81,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
       <div className="flex items-center p-4 border-b">
-        <h1 className="text-xl font-bold text-center flex-grow">Chat Utec</h1>
+        <h1 className="text-xl font-bold text-center flex-grow">CHAT UTEC</h1>
       </div>
 
       <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
