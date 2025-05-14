@@ -75,6 +75,25 @@ const ManageDocuments: React.FC = () => {
     }
   };
 
+  const fetchUrlDocument = async(path:string) => {
+    try{
+      const response = await fetch(`${apiUrlBase}/document/url?path=${path}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `Fallo al obtener documento. Status: ${response.status}` }));
+        throw new Error(errorData.message || `Failed to fetch document. Status: ${response.status}`);
+      }
+      const result = await response.json();
+      return result.data;
+    }catch(error){
+     console.error("Error fetching view document:", error);
+      toast({
+        title: "Error Fetching view Documents",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  }
+
   useEffect(() => {
     fetchDocuments();
   }, []);
@@ -182,8 +201,9 @@ const ManageDocuments: React.FC = () => {
     }
   };
 
-  const handleViewDocument = (path: string) => {
-    window.open(path, '_blank', 'noopener,noreferrer');
+  const handleViewDocument = async (path: string) => {
+    const url = await fetchUrlDocument(path);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const formatDate = (dateString: string) => {

@@ -227,7 +227,7 @@ const AppContent: React.FC = () => {
             description: "API URL is not configured.",
             variant: "destructive",
           });
-          setMessages(prev => [...prev, { text: 'Sorry, API is not configured.', isUser: false }]);
+          setMessages(prev => [...prev, { text: 'Lo sentimos, la API no está configurada.', isUser: false }]);
           setIsTyping(false); 
           return;
         }
@@ -259,7 +259,7 @@ const AppContent: React.FC = () => {
           description: `Failed to get response from AI: ${errorMessage}. Please try again.`,
           variant: "destructive",
         });
-        setMessages(prev => [...prev, { text: `Sorry, I could not get a response. ${errorMessage}`, isUser: false }]);
+        setMessages(prev => [...prev, { text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false }]);
         setIsTyping(false);
       }
     } else if (!isLoggedIn) {
