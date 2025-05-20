@@ -592,7 +592,7 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="icon"> {/* Changed to icon for default desktop behavior */}
+    <SidebarProvider defaultOpen={true} collapsible="offcanvas"> {/* Changed to icon for default desktop behavior */}
       <AppContent />
     </SidebarProvider>
   );
