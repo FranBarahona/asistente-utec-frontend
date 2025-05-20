@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, LogOut, FileText, MessageSquare, PanelLeft } from 'lucide-react';
+import { Send, LogOut, FileText, MessageSquare, PanelLeft, Loader2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -24,8 +24,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import ManageDocuments from '@/components/manage-documents';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 
 interface Message {
+  id?: string;
   text: string;
   isUser: boolean;
   isTyping?: boolean;
@@ -93,7 +97,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
           )}
           {messages.map((message, index) => (
             <div
-              key={index}
+              key={message.id || index} // Use message.id if available for better keying
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
                 }`}
             >
@@ -101,9 +105,18 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${message.isUser
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-secondary-foreground'
-                  } ${message.isTyping ? 'italic text-muted-foreground animate-pulse' : ''}`}
+                  } ${message.isTyping && !message.text ? 'animate-pulse' : ''}`} // Pulse only if typing and text is empty
               >
-                {message.text || (message.isTyping ? '...' : '')}
+                {message.isUser ? (
+                  message.text
+                ) : (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    className="prose prose-sm dark:prose-invert max-w-none"
+                  >
+                    {message.text || (message.isTyping ? '...' : '')}
+                  </ReactMarkdown>
+                )}
               </div>
             </div>
           ))}
@@ -133,7 +146,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
 const AppContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false); // This state now generally indicates if the AI is processing/typing
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -146,7 +159,6 @@ const AppContent: React.FC = () => {
   const sidebarContext = useSidebar();
 
   useEffect(() => {
-    // Attempt to retrieve login state from localStorage
     const storedEmail = localStorage.getItem('userEmail');
     if (storedEmail) {
       setUserEmail(storedEmail);
@@ -157,12 +169,12 @@ const AppContent: React.FC = () => {
 
 
   useEffect(() => {
-    setUserRole(determineUserRole(userEmail));
-    // Store email in localStorage on login, remove on logout
     if (userEmail) {
       localStorage.setItem('userEmail', userEmail);
+      setUserRole(determineUserRole(userEmail));
     } else {
       localStorage.removeItem('userEmail');
+      setUserRole('invitado');
     }
   }, [userEmail]);
 
@@ -177,35 +189,34 @@ const AppContent: React.FC = () => {
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
     let currentTypedText = '';
-    setIsTyping(true);
-    
-    // Add a new message object for the AI's response, initially empty and marked as typing
-    setMessages(prev => [...prev, { text: '', isUser: false, isTyping: true }]);
+    // setIsTyping(true); // This is set before API call and handled in callback
+
+    const initialMessageId = "ai-typing-" + Date.now();
+    setMessages(prev => [...prev, { id: initialMessageId, text: '', isUser: false, isTyping: true }]);
   
     const intervalId = setInterval(() => {
       if (i < text.length) {
         currentTypedText += text[i];
         setMessages(prev => {
           const newMessages = [...prev];
-          // Find the last message that is from AI and currently typing
-          const typingMessageIndex = newMessages.length - 1; // Assuming the last message is the one we're updating
-          if (typingMessageIndex !== -1 && newMessages[typingMessageIndex].isTyping && !newMessages[typingMessageIndex].isUser) {
-            newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' };
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
+          if (typingMessageIndex !== -1) {
+             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' , isTyping: true};
           }
           return newMessages;
         });
         i++;
       } else {
         clearInterval(intervalId);
-        setIsTyping(false);
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.length - 1; // Assuming the last message
-           if (typingMessageIndex !== -1 && !newMessages[typingMessageIndex].isUser) { // Ensure it's an AI message
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
+           if (typingMessageIndex !== -1) {
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
           }
           return newMessages;
         });
+        setIsTyping(false); // AI finished typing
         callback(currentTypedText);
       }
     }, 50);
@@ -215,9 +226,10 @@ const AppContent: React.FC = () => {
   const handleSendMessage = async () => {
     if (input.trim() !== '' && !isTyping && isLoggedIn) {
       const userMessageText = input;
-      const userMessage = { text: userMessageText, isUser: true };
+      const userMessage = { text: userMessageText, isUser: true, id: "user-" + Date.now() };
       setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
+      setIsTyping(true); // Indicate AI is about to process/respond
 
       try {
         const apiUrlBase = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -227,7 +239,7 @@ const AppContent: React.FC = () => {
             description: "API URL is not configured.",
             variant: "destructive",
           });
-          setMessages(prev => [...prev, { text: 'Lo sentimos, la API no está configurada.', isUser: false }]);
+          setMessages(prev => [...prev, { id: "error-" + Date.now(), text: 'Lo sentimos, la API no está configurada.', isUser: false }]);
           setIsTyping(false); 
           return;
         }
@@ -246,7 +258,7 @@ const AppContent: React.FC = () => {
           console.error("Invalid response format from API:", data);
           throw new Error("Invalid response format from API or message is not a string");
         }
-
+        //setIsTyping is now controlled by typeText
         typeText(aiResponseText, (finalText) => {
           console.log("AI response finished typing:", finalText);
         });
@@ -259,8 +271,8 @@ const AppContent: React.FC = () => {
           description: `Failed to get response from AI: ${errorMessage}. Please try again.`,
           variant: "destructive",
         });
-        setMessages(prev => [...prev, { text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false }]);
-        setIsTyping(false);
+        setMessages(prev => [...prev, { id: "error-" + Date.now(), text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false, isTyping: false }]);
+        setIsTyping(false); // Ensure isTyping is reset on error
       }
     } else if (!isLoggedIn) {
       toast({
@@ -289,7 +301,7 @@ const AppContent: React.FC = () => {
     const top = window.screenY + (window.innerHeight - height) / 2;
 
     const popup = window.open(
-      "", // Leave URL blank initially
+      "", 
       "MicrosoftLoginPopup",
       `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars`
     );
@@ -302,16 +314,14 @@ const AppContent: React.FC = () => {
       });
       return;
     }
-    // Display loading message in popup
     popup.document.write('<!DOCTYPE html><html><head><title>Logging in...</title><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; } .loader { border: 8px solid #e0e0e0; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></head><body><div style="text-align:center;"><div class="loader"></div><p style="margin-top:20px; font-size:16px; color: #333;">Iniciando sesión con Microsoft... Por favor espera.</p></div></body></html>');
-
 
     toast({
       title: "Iniciando sesión",
       description: "Espera mientras se inicia sesión con Microsoft...",
     });
     
-    let messageProcessed = false; // Flag to track if the message listener processed an event
+    let messageProcessed = false;
 
     try {
       const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
@@ -332,7 +342,7 @@ const AppContent: React.FC = () => {
 
       const messageListener = (event: MessageEvent) => {
         if (event.data && (event.data.email || event.data.error)) {
-            messageProcessed = true; // Mark that a message was processed
+            messageProcessed = true;
             const { email, error, name } = event.data;
             window.removeEventListener("message", messageListener); 
             if(popup && !popup.closed) popup.close();
@@ -349,12 +359,11 @@ const AppContent: React.FC = () => {
             if (email) {
                 setUserEmail(email); 
                 setIsLoggedIn(true);
-                const role = determineUserRole(email);
-                setUserRole(role);
+                // setUserRole is handled by useEffect on userEmail change
                 setCurrentView("chat");
                 toast({
                     title: "Inicio de sesión exitoso",
-                    description: `Ha iniciado sesión como ${name || email} (${role})`,
+                    description: `Ha iniciado sesión como ${name || email} (${determineUserRole(email)})`,
                 });
             }
         }
@@ -362,10 +371,10 @@ const AppContent: React.FC = () => {
       window.addEventListener("message", messageListener);
 
       const popupCloseCheckInterval = setInterval(() => {
-        if (popup.closed) {
+        if (!popup || popup.closed) { // Check if popup is null before accessing closed
           clearInterval(popupCloseCheckInterval);
-          window.removeEventListener("message", messageListener); // Clean up listener
-          if (!messageProcessed) { // Only show cancel toast if no message was processed from popup
+          window.removeEventListener("message", messageListener); 
+          if (!messageProcessed) { 
             toast({
               title: "Inicio de sesión cancelado",
               description: "Microsoft inicio de sesion ventana fue cerrada.",
@@ -374,7 +383,6 @@ const AppContent: React.FC = () => {
           }
         }
       }, 500);
-
 
     } catch (error) {
       console.error("Microsoft Login Error:", error);
@@ -390,7 +398,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setUserEmail(null);
     setIsLoggedIn(false);
-    setUserRole('invitado');
+    // setUserRole is handled by useEffect on userEmail change
     setMessages([]);
     setCurrentView('chat');
     toast({
@@ -577,9 +585,8 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="offcanvas">
+    <SidebarProvider defaultOpen={true} collapsible="icon"> {/* Changed to icon for default desktop behavior */}
       <AppContent />
     </SidebarProvider>
   );
 }
-
