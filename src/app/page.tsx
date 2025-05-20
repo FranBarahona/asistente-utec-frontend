@@ -144,8 +144,6 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
 
 
 const AppContent: React.FC = () => {
-   const [isHydrated, setIsHydrated] = useState(false);
-   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false); // This state now generally indicates if the AI is processing/typing
@@ -159,8 +157,6 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<CurrentView>('chat');
 
   const sidebarContext = useSidebar();
-
-  
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('userEmail');
@@ -189,13 +185,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-
-    useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  if (!isHydrated) return null;
 
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
@@ -369,7 +358,6 @@ const AppContent: React.FC = () => {
 
             if (email) {
                 setUserEmail(email); 
-                // setUserEmail("fran.mai@mail.utec.edu.sv"); 
                 setIsLoggedIn(true);
                 // setUserRole is handled by useEffect on userEmail change
                 setCurrentView("chat");
