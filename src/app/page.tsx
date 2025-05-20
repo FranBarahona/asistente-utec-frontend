@@ -93,7 +93,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
           )}
           {messages.map((message, index) => (
             <div
-              key={index}
+              key={`${index}-${message.text.slice(0, 10)}`}
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
                 }`}
             >
@@ -131,6 +131,8 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
 
 
 const AppContent: React.FC = () => {
+   const [isHydrated, setIsHydrated] = useState(false);
+   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -144,6 +146,8 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<CurrentView>('chat');
 
   const sidebarContext = useSidebar();
+
+  
 
   useEffect(() => {
     // Attempt to retrieve login state from localStorage
@@ -173,6 +177,13 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+
+    useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  if (!isHydrated) return null;
 
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
@@ -348,8 +359,10 @@ const AppContent: React.FC = () => {
 
             if (email) {
                 setUserEmail(email); 
+                // setUserEmail("fran.mai@mail.utec.edu.sv"); 
                 setIsLoggedIn(true);
                 const role = determineUserRole(email);
+                // const role = determineUserRole("fran.mai@mail.utec.edu.sv");
                 setUserRole(role);
                 setCurrentView("chat");
                 toast({
