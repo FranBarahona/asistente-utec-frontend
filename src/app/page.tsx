@@ -97,7 +97,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
           )}
           {messages.map((message, index) => (
             <div
-              key={message.id || index} // Use message.id if available for better keying
+               key={`${index}-${message.text.slice(0, 10)}`} 
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
                 }`}
             >
@@ -144,6 +144,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
 
 
 const AppContent: React.FC = () => {
+  const [isHydrated, setIsHydrated] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false); // This state now generally indicates if the AI is processing/typing
@@ -185,6 +186,12 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+      useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  if (!isHydrated) return null;
 
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
