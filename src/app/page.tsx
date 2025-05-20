@@ -98,7 +98,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
           )}
           {messages.map((message, index) => (
             <div
-               key={`${message.id || index}-${message.text.slice(0, 10)}`} 
+               key={message.id || `message-${index}`} 
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
                 }`}
             >
@@ -357,11 +357,11 @@ const AppContent: React.FC = () => {
       description: "Espera mientras se inicia sesión con Microsoft...",
     });
     
-    let messageProcessed = false;
+    let messageProcessed = false; // Flag to track if a success or error message has been processed
 
     try {
       const apiLoginUrl = `/api/auth/microsoft/login`; // Use relative path for API route
-      const response = await fetch(apiLoginUrl, { method: 'POST' }); // Changed to POST as per api route
+      const response = await fetch(apiLoginUrl, { method: 'POST' }); 
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
@@ -370,9 +370,6 @@ const AppContent: React.FC = () => {
 
       const data = await response.json();
       
-      // Simulate receiving email from popup for now
-      // In a real OAuth flow, the popup would redirect and eventually postMessage back.
-      // Here, we directly use the simulated email from the API response.
       if (data.email) {
         messageProcessed = true;
         setUserEmail(data.email); 
@@ -392,22 +389,13 @@ const AppContent: React.FC = () => {
         });
         if(popup && !popup.closed) popup.close();
       } else {
-        // This path handles the case where the API doesn't return email or error,
-        // which shouldn't happen with the current simulation.
-        // For a real OAuth flow, this is where you'd set popup.location.href = data.redirectUrl;
+        // This case generally shouldn't be hit with the current simulation.
+        // For a real OAuth flow, this is where you might set popup.location.href = data.redirectUrl;
         // and listen for window messages.
-        // For now, close the popup if no direct email.
         if(popup && !popup.closed) popup.close();
-         if (!messageProcessed) { // Only show cancel if not already processed
-          toast({
-            title: "Inicio de sesión cancelado",
-            description: "La ventana de inicio de sesión de Microsoft se cerró o no se recibió información.",
-            variant: "default" 
-          });
-        }
       }
-
     } catch (error) {
+      messageProcessed = true; // Consider an error as a processed message to avoid "canceled" toast
       console.error("Microsoft Login Error:", error);
       if(popup && !popup.closed) popup.close();
       toast({
@@ -415,6 +403,15 @@ const AppContent: React.FC = () => {
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
+    } finally {
+        // Check if popup closed without a success/error message being processed
+        if (popup && popup.closed && !messageProcessed) {
+             toast({
+                title: "Inicio de sesión cancelado",
+                description: "La ventana de inicio de sesión de Microsoft se cerró o no se recibió información.",
+                variant: "default" 
+            });
+        }
     }
   };
 
@@ -516,7 +513,6 @@ const AppContent: React.FC = () => {
       <div className="flex h-screen w-screen bg-background">
         <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : sidebarContext?.collapsible}>
           <SidebarContent>
-             {/* <SidebarTitle className="sr-only">Main Navigation</SidebarTitle> */}
             <SidebarHeader className="items-center">
               {isLoggedIn && userEmail && (
                 <div className="flex flex-col items-center gap-2 w-full">
@@ -614,5 +610,3 @@ export default function Home() {
     </SidebarProvider>
   );
 }
-
-    
