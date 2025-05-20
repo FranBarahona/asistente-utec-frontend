@@ -24,7 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import ManageDocuments from '@/components/manage-documents';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -177,7 +177,7 @@ const AppContent: React.FC = () => {
       setIsLoggedIn(true);
       setUserRole(determineUserRole(storedEmail));
     }
-    setIsHydrated(true); // Moved setIsHydrated here
+    setIsHydrated(true);
   }, []);
 
 
@@ -202,20 +202,19 @@ const AppContent: React.FC = () => {
 
   if (!isHydrated) return null;
 
-  const typeText = (text: string, callback: (finalText: string) => void) => {
+  const typeText = (text: string, messageId: string, callback: (finalText: string) => void) => {
     let i = 0;
     let currentTypedText = '';
-    const initialMessageId = "ai-typing-" + Date.now();
-    setMessages(prev => [...prev, { id: initialMessageId, text: '', isUser: false, isTyping: true }]);
+    // The message with messageId is already added with isTyping: true
   
     const intervalId = setInterval(() => {
       if (i < text.length) {
         currentTypedText += text[i];
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === messageId);
           if (typingMessageIndex !== -1) {
-             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' , isTyping: true};
+             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: true};
           }
           return newMessages;
         });
@@ -224,13 +223,13 @@ const AppContent: React.FC = () => {
         clearInterval(intervalId);
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === messageId);
            if (typingMessageIndex !== -1) {
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
           }
           return newMessages;
         });
-        setIsTyping(false); 
+        setIsTyping(false); // Global isTyping for input state
         callback(currentTypedText);
       }
     }, 50);
@@ -243,7 +242,11 @@ const AppContent: React.FC = () => {
       const userMessage = { text: userMessageText, isUser: true, id: "user-" + Date.now() };
       setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
-      setIsTyping(true); 
+      setIsTyping(true); // Disable input field
+
+      const aiMessageId = "ai-placeholder-" + Date.now();
+      // Add AI placeholder message immediately with loader
+      setMessages(prev => [...prev, { id: aiMessageId, text: '', isUser: false, isTyping: true }]);
 
       try {
         const apiUrlBase = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -253,7 +256,12 @@ const AppContent: React.FC = () => {
             description: "API URL is not configured.",
             variant: "destructive",
           });
-          setMessages(prev => [...prev, { id: "error-" + Date.now(), text: 'Lo sentimos, la API no está configurada.', isUser: false }]);
+          // Update placeholder to show error
+          setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId 
+            ? { ...msg, text: 'Lo sentimos, la API no está configurada.', isTyping: false } 
+            : msg
+          ));
           setIsTyping(false); 
           return;
         }
@@ -270,10 +278,20 @@ const AppContent: React.FC = () => {
 
         if (typeof aiResponseText !== 'string') {
           console.error("Invalid response format from API:", data);
-          throw new Error("Invalid response format from API or message is not a string");
+          const errorToDisplay = "Invalid response format from API or message is not a string";
+           setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId 
+            ? { ...msg, text: errorToDisplay, isTyping: false } 
+            : msg
+          ));
+          setIsTyping(false);
+          throw new Error(errorToDisplay);
         }
-        typeText(aiResponseText, (finalText) => {
+        
+        // typeText will update the message with aiMessageId
+        typeText(aiResponseText, aiMessageId, (finalText) => {
           console.log("AI response finished typing:", finalText);
+          // setIsTyping(false) is called at the end of typeText
         });
 
       } catch (error) {
@@ -284,7 +302,12 @@ const AppContent: React.FC = () => {
           description: `Failed to get response from AI: ${errorMessage}. Please try again.`,
           variant: "destructive",
         });
-        setMessages(prev => [...prev, { id: "error-" + Date.now(), text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false, isTyping: false }]);
+        // Update placeholder to show error
+        setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId 
+            ? { ...msg, text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isTyping: false } 
+            : msg
+        ));
         setIsTyping(false); 
       }
     } else if (!isLoggedIn) {
@@ -337,8 +360,8 @@ const AppContent: React.FC = () => {
     let messageProcessed = false;
 
     try {
-      const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
-      const response = await fetch(apiLoginUrl, { method: 'GET' }); 
+      const apiLoginUrl = `/api/auth/microsoft/login`; // Use relative path for API route
+      const response = await fetch(apiLoginUrl, { method: 'POST' }); // Changed to POST as per api route
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
@@ -346,59 +369,43 @@ const AppContent: React.FC = () => {
       }
 
       const data = await response.json();
-
-      if (!data.redirectUrl) {
-        throw new Error("Login failed. No redirect URL received from backend.");
+      
+      // Simulate receiving email from popup for now
+      // In a real OAuth flow, the popup would redirect and eventually postMessage back.
+      // Here, we directly use the simulated email from the API response.
+      if (data.email) {
+        messageProcessed = true;
+        setUserEmail(data.email); 
+        setIsLoggedIn(true);
+        setCurrentView("chat");
+        toast({
+            title: "Inicio de sesión exitoso",
+            description: `Ha iniciado sesión como ${data.email} (${determineUserRole(data.email)})`,
+        });
+        if(popup && !popup.closed) popup.close();
+      } else if (data.error) {
+        messageProcessed = true;
+        toast({
+            title: "Inicio de sesión fallido",
+            description: data.error,
+            variant: "destructive",
+        });
+        if(popup && !popup.closed) popup.close();
+      } else {
+        // This path handles the case where the API doesn't return email or error,
+        // which shouldn't happen with the current simulation.
+        // For a real OAuth flow, this is where you'd set popup.location.href = data.redirectUrl;
+        // and listen for window messages.
+        // For now, close the popup if no direct email.
+        if(popup && !popup.closed) popup.close();
+         if (!messageProcessed) { // Only show cancel if not already processed
+          toast({
+            title: "Inicio de sesión cancelado",
+            description: "La ventana de inicio de sesión de Microsoft se cerró o no se recibió información.",
+            variant: "default" 
+          });
+        }
       }
-
-      popup.location.href = data.redirectUrl;
-
-      const messageListener = (event: MessageEvent) => {
-         if (event.origin !== window.location.origin && event.origin !== new URL(data.redirectUrl).origin && !data.redirectUrl.startsWith(event.origin)) { // Security check
-            console.warn("Ignored message from unexpected origin:", event.origin);
-            return;
-        }
-        if (event.data && (event.data.email || event.data.error)) {
-            messageProcessed = true;
-            const { email, error, name } = event.data;
-            window.removeEventListener("message", messageListener); 
-            if(popup && !popup.closed) popup.close();
-
-            if (error) {
-                 toast({
-                    title: "Inicio de sesión fallido",
-                    description: error,
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            if (email) {
-                setUserEmail(email); 
-                setIsLoggedIn(true);
-                setCurrentView("chat");
-                toast({
-                    title: "Inicio de sesión exitoso",
-                    description: `Ha iniciado sesión como ${name || email} (${determineUserRole(email)})`,
-                });
-            }
-        }
-      };
-      window.addEventListener("message", messageListener);
-
-      const popupCloseCheckInterval = setInterval(() => {
-        if (!popup || popup.closed) { 
-          clearInterval(popupCloseCheckInterval);
-          window.removeEventListener("message", messageListener); 
-          if (!messageProcessed) { 
-            toast({
-              title: "Inicio de sesión cancelado",
-              description: "Microsoft inicio de sesion ventana fue cerrada.",
-              variant: "default" 
-            });
-          }
-        }
-      }, 500);
 
     } catch (error) {
       console.error("Microsoft Login Error:", error);
@@ -439,8 +446,7 @@ const AppContent: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
-              {/* Sidebar Title for accessibility - Radix requires it */}
-              {/* <SheetTitle className="sr-only">Main Navigation</SheetTitle> */}
+               <SheetTitle className="sr-only">Main Navigation</SheetTitle>
               <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                   <div className="flex flex-col items-center gap-2 w-full">
