@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -97,7 +98,7 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
           )}
           {messages.map((message, index) => (
             <div
-               key={`${index}-${message.text.slice(0, 10)}`} 
+               key={`${message.id || index}-${message.text.slice(0, 10)}`} 
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'
                 }`}
             >
@@ -105,16 +106,26 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${message.isUser
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-secondary-foreground'
-                  } ${message.isTyping && !message.text ? 'animate-pulse' : ''}`} // Pulse only if typing and text is empty
+                  }`}
               >
                 {message.isUser ? (
                   message.text
+                ) : message.isTyping ? (
+                  <div className="flex items-start">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2 shrink-0 mt-1" />
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     className="prose prose-sm dark:prose-invert max-w-none"
                   >
-                    {message.text || (message.isTyping ? '...' : '')}
+                    {message.text}
                   </ReactMarkdown>
                 )}
               </div>
@@ -147,7 +158,7 @@ const AppContent: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false); // This state now generally indicates if the AI is processing/typing
+  const [isTyping, setIsTyping] = useState(false); 
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -166,6 +177,7 @@ const AppContent: React.FC = () => {
       setIsLoggedIn(true);
       setUserRole(determineUserRole(storedEmail));
     }
+    setIsHydrated(true); // Moved setIsHydrated here
   }, []);
 
 
@@ -187,17 +199,12 @@ const AppContent: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-      useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   if (!isHydrated) return null;
 
   const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
     let currentTypedText = '';
-    // setIsTyping(true); // This is set before API call and handled in callback
-
     const initialMessageId = "ai-typing-" + Date.now();
     setMessages(prev => [...prev, { id: initialMessageId, text: '', isUser: false, isTyping: true }]);
   
@@ -223,7 +230,7 @@ const AppContent: React.FC = () => {
           }
           return newMessages;
         });
-        setIsTyping(false); // AI finished typing
+        setIsTyping(false); 
         callback(currentTypedText);
       }
     }, 50);
@@ -236,7 +243,7 @@ const AppContent: React.FC = () => {
       const userMessage = { text: userMessageText, isUser: true, id: "user-" + Date.now() };
       setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
-      setIsTyping(true); // Indicate AI is about to process/respond
+      setIsTyping(true); 
 
       try {
         const apiUrlBase = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -265,7 +272,6 @@ const AppContent: React.FC = () => {
           console.error("Invalid response format from API:", data);
           throw new Error("Invalid response format from API or message is not a string");
         }
-        //setIsTyping is now controlled by typeText
         typeText(aiResponseText, (finalText) => {
           console.log("AI response finished typing:", finalText);
         });
@@ -279,7 +285,7 @@ const AppContent: React.FC = () => {
           variant: "destructive",
         });
         setMessages(prev => [...prev, { id: "error-" + Date.now(), text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false, isTyping: false }]);
-        setIsTyping(false); // Ensure isTyping is reset on error
+        setIsTyping(false); 
       }
     } else if (!isLoggedIn) {
       toast({
@@ -348,6 +354,10 @@ const AppContent: React.FC = () => {
       popup.location.href = data.redirectUrl;
 
       const messageListener = (event: MessageEvent) => {
+         if (event.origin !== window.location.origin && event.origin !== new URL(data.redirectUrl).origin && !data.redirectUrl.startsWith(event.origin)) { // Security check
+            console.warn("Ignored message from unexpected origin:", event.origin);
+            return;
+        }
         if (event.data && (event.data.email || event.data.error)) {
             messageProcessed = true;
             const { email, error, name } = event.data;
@@ -366,7 +376,6 @@ const AppContent: React.FC = () => {
             if (email) {
                 setUserEmail(email); 
                 setIsLoggedIn(true);
-                // setUserRole is handled by useEffect on userEmail change
                 setCurrentView("chat");
                 toast({
                     title: "Inicio de sesión exitoso",
@@ -378,7 +387,7 @@ const AppContent: React.FC = () => {
       window.addEventListener("message", messageListener);
 
       const popupCloseCheckInterval = setInterval(() => {
-        if (!popup || popup.closed) { // Check if popup is null before accessing closed
+        if (!popup || popup.closed) { 
           clearInterval(popupCloseCheckInterval);
           window.removeEventListener("message", messageListener); 
           if (!messageProcessed) { 
@@ -405,7 +414,6 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setUserEmail(null);
     setIsLoggedIn(false);
-    // setUserRole is handled by useEffect on userEmail change
     setMessages([]);
     setCurrentView('chat');
     toast({
@@ -431,6 +439,8 @@ const AppContent: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
+              {/* Sidebar Title for accessibility - Radix requires it */}
+              {/* <SheetTitle className="sr-only">Main Navigation</SheetTitle> */}
               <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                   <div className="flex flex-col items-center gap-2 w-full">
@@ -500,6 +510,7 @@ const AppContent: React.FC = () => {
       <div className="flex h-screen w-screen bg-background">
         <Sidebar collapsible={sidebarContext?.isMobile ? "offcanvas" : sidebarContext?.collapsible}>
           <SidebarContent>
+             {/* <SidebarTitle className="sr-only">Main Navigation</SidebarTitle> */}
             <SidebarHeader className="items-center">
               {isLoggedIn && userEmail && (
                 <div className="flex flex-col items-center gap-2 w-full">
@@ -592,8 +603,10 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="offcanvas"> {/* Changed to icon for default desktop behavior */}
+    <SidebarProvider defaultOpen={true} collapsible="icon"> 
       <AppContent />
     </SidebarProvider>
   );
 }
+
+    
