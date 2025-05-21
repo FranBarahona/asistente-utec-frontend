@@ -70,6 +70,7 @@ interface ChatInterfaceProps {
   onInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  isLoading: boolean;
 }
 
 const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
@@ -81,7 +82,8 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   onInputKeyDown,
   scrollAreaRef,
-  messagesEndRef
+  messagesEndRef,
+  isLoading
 }) => {
   return (
     <div className="flex flex-col w-full max-w-2xl h-full border rounded-lg shadow-md bg-card">
@@ -112,7 +114,9 @@ const ChatInterfaceComponent: React.FC<ChatInterfaceProps> = ({
                   message.text
                 ) : message.isTyping ? (
                   <div className="flex items-start">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2 shrink-0 mt-1" />
+                  {isLoading && (
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  )}
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       className="prose prose-sm dark:prose-invert max-w-none"
@@ -159,6 +163,7 @@ const AppContent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -232,7 +237,7 @@ const AppContent: React.FC = () => {
         setIsTyping(false); // Global isTyping for input state
         callback(currentTypedText);
       }
-    }, 50);
+    }, 20);
   };
 
 
@@ -249,6 +254,7 @@ const AppContent: React.FC = () => {
       setMessages(prev => [...prev, { id: aiMessageId, text: '', isUser: false, isTyping: true }]);
 
       try {
+        setIsLoading(true);
         const apiUrlBase = process.env.NEXT_PUBLIC_BACKEND_URL;
         if (!apiUrlBase) {
           toast({
@@ -309,7 +315,9 @@ const AppContent: React.FC = () => {
             : msg
         ));
         setIsTyping(false); 
-      }
+      }finally {
+      setIsLoading(false);
+  }
     } else if (!isLoggedIn) {
       toast({
         title: "Inicio de sesión requerido",
@@ -588,6 +596,7 @@ const AppContent: React.FC = () => {
                 onInputKeyDown={handleInputKeyDown}
                 scrollAreaRef={scrollAreaRef}
                 messagesEndRef={messagesEndRef}
+                isLoading={isLoading}
               />
             )}
             {currentView === 'documents' && userRole === 'administrador' && <ManageDocuments />}
@@ -605,7 +614,7 @@ const AppContent: React.FC = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider defaultOpen={true} collapsible="icon"> 
+    <SidebarProvider defaultOpen={true} collapsible="offcanvas"> 
       <AppContent />
     </SidebarProvider>
   );
