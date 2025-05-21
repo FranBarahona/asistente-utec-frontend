@@ -619,13 +619,11 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center justify-start gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors duration-100 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
-  // Icon and Offcanvas specific styles for collapsed state
+  ["peer/menu-button flex w-full items-center justify-start gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors duration-100 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
   "group-data-[collapsible=icon]:group-data-[state=collapsed]:justify-center group-data-[collapsible=icon]:group-data-[state=collapsed]:size-9 group-data-[collapsible=icon]:group-data-[state=collapsed]:p-0",
-  // Hide text span in offcanvas collapsed state, but keep icon
   "group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:justify-center group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:size-9 group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:p-0 group-data-[collapsible=offcanvas]:group-data-[state=collapsed]:[&>span]:sr-only",
   "[&>span]:transition-opacity group-data-[collapsible=icon]:group-data-[state=collapsed]:[&>span]:sr-only", // Hide text in icon collapsed mode
-  "[&>svg]:size-4 [&>svg]:shrink-0",
+  "[&>svg]:size-4 [&>svg]:shrink-0"].join(" "),
   {
     variants: {
       variant: {
@@ -742,10 +740,6 @@ const SidebarMenuAction = React.forwardRef<
         "absolute right-1 top-1/2 -translate-y-1/2 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-opacity hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
         // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
-        // Adjust top based on button size if needed (example)
-        // "peer-data-[size=sm]/menu-button:top-1",
-        // "peer-data-[size=default]/menu-button:top-1.5",
-        // "peer-data-[size=lg]/menu-button:top-2.5",
         isHidden && "hidden", // Hide action in icon/offcanvas collapsed mode
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
