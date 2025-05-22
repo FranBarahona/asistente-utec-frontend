@@ -24,7 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import ManageDocuments from '@/components/manage-documents';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -182,7 +182,7 @@ const AppContent: React.FC = () => {
       setIsLoggedIn(true);
       setUserRole(determineUserRole(storedEmail));
     }
-    setIsHydrated(true);
+    setIsHydrated(true); // Moved setIsHydrated here
   }, []);
 
 
@@ -207,19 +207,20 @@ const AppContent: React.FC = () => {
 
   if (!isHydrated) return null;
 
-  const typeText = (text: string, messageId: string, callback: (finalText: string) => void) => {
+  const typeText = (text: string, callback: (finalText: string) => void) => {
     let i = 0;
     let currentTypedText = '';
-    // The message with messageId is already added with isTyping: true
+    const initialMessageId = "ai-typing-" + Date.now();
+    setMessages(prev => [...prev, { id: initialMessageId, text: '', isUser: false, isTyping: true }]);
   
     const intervalId = setInterval(() => {
       if (i < text.length) {
         currentTypedText += text[i];
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findIndex(msg => msg.id === messageId);
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
           if (typingMessageIndex !== -1) {
-             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: true};
+             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText + '...' , isTyping: true};
           }
           return newMessages;
         });
@@ -228,13 +229,13 @@ const AppContent: React.FC = () => {
         clearInterval(intervalId);
         setMessages(prev => {
           const newMessages = [...prev];
-          const typingMessageIndex = newMessages.findIndex(msg => msg.id === messageId);
+          const typingMessageIndex = newMessages.findIndex(msg => msg.id === initialMessageId);
            if (typingMessageIndex !== -1) {
             newMessages[typingMessageIndex] = { ...newMessages[typingMessageIndex], text: currentTypedText, isTyping: false };
           }
           return newMessages;
         });
-        setIsTyping(false); // Global isTyping for input state
+        setIsTyping(false); 
         callback(currentTypedText);
       }
     }, 20);
@@ -247,11 +248,7 @@ const AppContent: React.FC = () => {
       const userMessage = { text: userMessageText, isUser: true, id: "user-" + Date.now() };
       setMessages(prevMessages => [...prevMessages, userMessage]);
       setInput('');
-      setIsTyping(true); // Disable input field
-
-      const aiMessageId = "ai-placeholder-" + Date.now();
-      // Add AI placeholder message immediately with loader
-      setMessages(prev => [...prev, { id: aiMessageId, text: '', isUser: false, isTyping: true }]);
+      setIsTyping(true); 
 
       try {
         setIsLoading(true);
@@ -262,12 +259,7 @@ const AppContent: React.FC = () => {
             description: "API URL is not configured.",
             variant: "destructive",
           });
-          // Update placeholder to show error
-          setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId 
-            ? { ...msg, text: 'Lo sentimos, la API no está configurada.', isTyping: false } 
-            : msg
-          ));
+          setMessages(prev => [...prev, { id: "error-" + Date.now(), text: 'Lo sentimos, la API no está configurada.', isUser: false }]);
           setIsTyping(false); 
           return;
         }
@@ -284,20 +276,10 @@ const AppContent: React.FC = () => {
 
         if (typeof aiResponseText !== 'string') {
           console.error("Invalid response format from API:", data);
-          const errorToDisplay = "Invalid response format from API or message is not a string";
-           setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId 
-            ? { ...msg, text: errorToDisplay, isTyping: false } 
-            : msg
-          ));
-          setIsTyping(false);
-          throw new Error(errorToDisplay);
+          throw new Error("Invalid response format from API or message is not a string");
         }
-        
-        // typeText will update the message with aiMessageId
-        typeText(aiResponseText, aiMessageId, (finalText) => {
+        typeText(aiResponseText, (finalText) => {
           console.log("AI response finished typing:", finalText);
-          // setIsTyping(false) is called at the end of typeText
         });
 
       } catch (error) {
@@ -308,12 +290,7 @@ const AppContent: React.FC = () => {
           description: `Failed to get response from AI: ${errorMessage}. Please try again.`,
           variant: "destructive",
         });
-        // Update placeholder to show error
-        setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId 
-            ? { ...msg, text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isTyping: false } 
-            : msg
-        ));
+        setMessages(prev => [...prev, { id: "error-" + Date.now(), text: `Lo siento, no pude obtener respuesta. ${errorMessage}`, isUser: false, isTyping: false }]);
         setIsTyping(false); 
       }finally {
       setIsLoading(false);
@@ -377,7 +354,6 @@ const AppContent: React.FC = () => {
       }
 
       const data = await response.json();
-      
       if (!data.redirectUrl) {
         throw new Error("Login failed. No redirect URL received from backend.");
       }
@@ -429,8 +405,8 @@ const AppContent: React.FC = () => {
             });
           }
         }
-      }
-      , 500);
+      }, 500);
+
     } catch (error) {
       messageProcessed = true; // Consider an error as a processed message to avoid "canceled" toast
       console.error("Microsoft Login Error:", error);
@@ -480,7 +456,8 @@ const AppContent: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[--sidebar-width-mobile] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden">
-               <SheetTitle className="sr-only">Main Navigation</SheetTitle>
+              {/* Sidebar Title for accessibility - Radix requires it */}
+              {/* <SheetTitle className="sr-only">Main Navigation</SheetTitle> */}
               <SidebarHeader className="items-center">
                 {isLoggedIn && userEmail && (
                   <div className="flex flex-col items-center gap-2 w-full">
