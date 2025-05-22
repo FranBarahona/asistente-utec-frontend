@@ -368,8 +368,8 @@ const AppContent: React.FC = () => {
     let messageProcessed = false; // Flag to track if a success or error message has been processed
 
     try {
-      const apiLoginUrl = `/api/auth/microsoft/login`; // Use relative path for API route
-      const response = await fetch(apiLoginUrl, { method: 'POST' }); 
+      const apiLoginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/microsoft/login`;
+      const response = await fetch(apiLoginUrl, { method: 'GET' }); 
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error de red o respuesta no JSON" }));
@@ -378,30 +378,59 @@ const AppContent: React.FC = () => {
 
       const data = await response.json();
       
-      if (data.email) {
-        messageProcessed = true;
-        setUserEmail(data.email); 
-        setIsLoggedIn(true);
-        setCurrentView("chat");
-        toast({
-            title: "Inicio de sesión exitoso",
-            description: `Ha iniciado sesión como ${data.email} (${determineUserRole(data.email)})`,
-        });
-        if(popup && !popup.closed) popup.close();
-      } else if (data.error) {
-        messageProcessed = true;
-        toast({
-            title: "Inicio de sesión fallido",
-            description: data.error,
-            variant: "destructive",
-        });
-        if(popup && !popup.closed) popup.close();
-      } else {
-        // This case generally shouldn't be hit with the current simulation.
-        // For a real OAuth flow, this is where you might set popup.location.href = data.redirectUrl;
-        // and listen for window messages.
-        if(popup && !popup.closed) popup.close();
+      if (!data.redirectUrl) {
+        throw new Error("Login failed. No redirect URL received from backend.");
       }
+
+      popup.location.href = data.redirectUrl;
+
+      const messageListener = (event: MessageEvent) => {
+         if (event.origin !== window.location.origin && event.origin !== new URL(data.redirectUrl).origin && !data.redirectUrl.startsWith(event.origin)) { // Security check
+            console.warn("Ignored message from unexpected origin:", event.origin);
+            return;
+        }
+        if (event.data && (event.data.email || event.data.error)) {
+            messageProcessed = true;
+            const { email, error, name } = event.data;
+            window.removeEventListener("message", messageListener); 
+            if(popup && !popup.closed) popup.close();
+
+            if (error) {
+                 toast({
+                    title: "Inicio de sesión fallido",
+                    description: error,
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (email) {
+                setUserEmail(email); 
+                setIsLoggedIn(true);
+                setCurrentView("chat");
+                toast({
+                    title: "Inicio de sesión exitoso",
+                    description: `Ha iniciado sesión como ${name || email} (${determineUserRole(email)})`,
+                });
+            }
+        }
+      };
+      window.addEventListener("message", messageListener);
+
+      const popupCloseCheckInterval = setInterval(() => {
+        if (!popup || popup.closed) { 
+          clearInterval(popupCloseCheckInterval);
+          window.removeEventListener("message", messageListener); 
+          if (!messageProcessed) { 
+            toast({
+              title: "Inicio de sesión cancelado",
+              description: "Microsoft inicio de sesion ventana fue cerrada.",
+              variant: "default" 
+            });
+          }
+        }
+      }
+      , 500);
     } catch (error) {
       messageProcessed = true; // Consider an error as a processed message to avoid "canceled" toast
       console.error("Microsoft Login Error:", error);
